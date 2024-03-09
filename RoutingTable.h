@@ -6,6 +6,15 @@
 #include <iostream>
 #include <algorithm>
 
+bool isStringNumeric(const std::string& str) {
+    for (char c : str) {
+        if (!std::isdigit(c)) {
+            return false;
+        }
+    }
+    return true; 
+}
+
 struct RoutingTableRow {
     unsigned int lifetime;
     unsigned char firstOctet;
@@ -27,7 +36,7 @@ public:
     void print(const std::vector<RoutingTableRow>& vectorToPrint);
     std::vector<unsigned char> processIPAddress(const std::string& ipAddressString);
     unsigned int processLifetime(const std::string& lifetimeString);
-    void saveToCSV(const std::string& filename);
+    void saveToCSV(const std::string& filename, const std::vector<RoutingTableRow>& vectorToPrint);
     std::string convertLifetime(unsigned int lifetime);
     std::vector<RoutingTableRow> matchLifetime(const std::string& start, const std::string& end);
     std::vector<RoutingTableRow> getRoutingTable() { return routingTable; }
@@ -284,15 +293,15 @@ std::string RoutingTable::convertLifetime(unsigned int lifetime) {
     return result;
 }
 
-void RoutingTable::saveToCSV(const std::string& filename) {
+void RoutingTable::saveToCSV(const std::string& filename, const std::vector<RoutingTableRow>& vectorToPrint) {
     std::ofstream file(filename);
     if (file.is_open()) {
         file << "Destination;Next-Hop;Lifetime\n";
-        for (size_t i = 0; i < this->routingTable.size(); i++) {
-            file << int(this->routingTable[i].firstOctet) << "." << int(this->routingTable[i].secondOctet) << "." << int(this->routingTable[i].thirdOctet) << "." << int(this->routingTable[i].fourthOctet) << "/" << int(this->routingTable[i].prefix);
-            file << ";via " << int(this->routingTable[i].nextHopFirstOctet) << "." << int(this->routingTable[i].nextHopSecondOctet) << "." << int(this->routingTable[i].nextHopThirdOctet) << "." << int(this->routingTable[i].nextHopFourthOctet);
-            file << ";" << this->convertLifetime(this->routingTable[i].lifetime);
-            if (i != this->routingTable.size() - 1) {
+        for (size_t i = 0; i < vectorToPrint.size(); i++) {
+            file << int(vectorToPrint[i].firstOctet) << "." << int(vectorToPrint[i].secondOctet) << "." << int(vectorToPrint[i].thirdOctet) << "." << int(vectorToPrint[i].fourthOctet) << "/" << int(vectorToPrint[i].prefix);
+            file << ";via " << int(vectorToPrint[i].nextHopFirstOctet) << "." << int(vectorToPrint[i].nextHopSecondOctet) << "." << int(vectorToPrint[i].nextHopThirdOctet) << "." << int(vectorToPrint[i].nextHopFourthOctet);
+            file << ";" << this->convertLifetime(vectorToPrint[i].lifetime);
+            if (i != vectorToPrint.size() - 1) {
                 file << std::endl;
             }
         }
@@ -302,8 +311,12 @@ void RoutingTable::saveToCSV(const std::string& filename) {
 
 std::vector<RoutingTableRow> RoutingTable::matchLifetime(const std::string& start, const std::string& end) {
     std::vector<RoutingTableRow> matchedRows;
-    unsigned int startLifetime = processLifetime(start);
-    unsigned int endLifetime = processLifetime(end);
+    unsigned int startLifetime = isStringNumeric(start) ? std::stoul(start) : this->processLifetime(start);
+    unsigned int endLifetime = isStringNumeric(end) ? std::stoul(end) : this->processLifetime(end);
+    if (startLifetime > endLifetime) {
+        std::swap(startLifetime, endLifetime);
+    }
+    std::cout << "Selected lifetime: " << startLifetime << "(s) - " << endLifetime << "(s)" << std::endl;
     std::for_each(routingTable.begin(), routingTable.end(), [=, &matchedRows](RoutingTableRow& row) {
         if (row.lifetime >= startLifetime && row.lifetime <= endLifetime) {
             matchedRows.push_back(row);
