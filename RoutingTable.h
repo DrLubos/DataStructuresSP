@@ -4,6 +4,7 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <algorithm>
 
 struct RoutingTableRow {
     unsigned int lifetime;
@@ -23,11 +24,12 @@ private:
     std::vector<RoutingTableRow> routingTable;
 public:
     void loadFromCSV(const std::string& filename);
-    void printAll();
+    void print(const std::vector<RoutingTableRow>& vectorToPrint);
     std::vector<unsigned char> processIPAddress(const std::string& ipAddressString);
     unsigned int processLifetime(const std::string& lifetimeString);
     void saveToCSV(const std::string& filename);
     std::string convertLifetime(unsigned int lifetime);
+    std::vector<RoutingTableRow> matchLifetime(const std::string& start, const std::string& end);
     std::vector<RoutingTableRow> getRoutingTable() { return routingTable; }
 };
 
@@ -103,14 +105,14 @@ void RoutingTable::loadFromCSV(const std::string& filename) {
     }
 }
 
-void RoutingTable::printAll() {
-    for (const auto& row : routingTable) {
+void RoutingTable::print(const std::vector<RoutingTableRow>& vectorToPrint) {
+    std::for_each(vectorToPrint.begin(), vectorToPrint.end(), [=](const RoutingTableRow& row) {
         std::cout << "===============================================" << std::endl;
         std::cout << "Destination: " << int(row.firstOctet) << "." << int(row.secondOctet) << "." << int(row.thirdOctet) << "." << int(row.fourthOctet) << "/" << int(row.prefix) << std::endl;
         std::cout << "Next Hop: " << int(row.nextHopFirstOctet) << "." << int(row.nextHopSecondOctet) << "." << int(row.nextHopThirdOctet) << "." << int(row.nextHopFourthOctet) << std::endl;
         std::cout << "Lifetime: ";
         row.lifetime > 59 ? std::cout << row.lifetime << "(s) " << this->convertLifetime(row.lifetime) << std::endl : std::cout << row.lifetime << "s" << std::endl;
-    }
+    });
 }
 
 std::vector<unsigned char> RoutingTable::processIPAddress(const std::string& ipAddressString) {
@@ -296,4 +298,16 @@ void RoutingTable::saveToCSV(const std::string& filename) {
         }
     }
     file.close();
+}
+
+std::vector<RoutingTableRow> RoutingTable::matchLifetime(const std::string& start, const std::string& end) {
+    std::vector<RoutingTableRow> matchedRows;
+    unsigned int startLifetime = processLifetime(start);
+    unsigned int endLifetime = processLifetime(end);
+    std::for_each(routingTable.begin(), routingTable.end(), [=, &matchedRows](RoutingTableRow& row) {
+        if (row.lifetime >= startLifetime && row.lifetime <= endLifetime) {
+            matchedRows.push_back(row);
+        }
+    });
+    return matchedRows;
 }

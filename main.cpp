@@ -8,7 +8,9 @@ int main() {
         std::cerr << "Error: " << e.what() << std::endl;
         return 1;
     }
-    routingTable.printAll();
+    routingTable.print(routingTable.getRoutingTable());
+    std::vector<RoutingTableRow> matching = routingTable.matchLifetime("0", "d");
+    routingTable.print(matching);
     //routingTable.saveToCSV("RT2.csv");
     return 0;
 }
