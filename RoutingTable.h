@@ -38,7 +38,7 @@ public:
     unsigned int processLifetime(const std::string& lifetimeString);
     void saveToCSV(const std::string& filename, const std::vector<RoutingTableRow>& vectorToPrint);
     std::string convertLifetime(unsigned int lifetime);
-    std::vector<RoutingTableRow> matchLifetime(const std::string& start, const std::string& end);
+    void matchLifetime(const std::string& start, const std::string& end, std::vector<RoutingTableRow>& tableToFilter);
     std::vector<RoutingTableRow> matchWithAddress(const std::string& address);
     std::vector<RoutingTableRow> getRoutingTable() { return routingTable; }
 };
@@ -310,20 +310,16 @@ void RoutingTable::saveToCSV(const std::string& filename, const std::vector<Rout
     file.close();
 }
 
-std::vector<RoutingTableRow> RoutingTable::matchLifetime(const std::string& start, const std::string& end) {
-    std::vector<RoutingTableRow> matchedRows;
+void RoutingTable::matchLifetime(const std::string& start, const std::string& end, std::vector<RoutingTableRow>& tableToFilter) {
     unsigned int startLifetime = isStringNumeric(start) ? std::stoul(start) : this->processLifetime(start);
     unsigned int endLifetime = isStringNumeric(end) ? std::stoul(end) : this->processLifetime(end);
     if (startLifetime > endLifetime) {
         std::swap(startLifetime, endLifetime);
     }
     std::cout << "Selected lifetime: " << startLifetime << "(s) - " << endLifetime << "(s)" << std::endl;
-    std::for_each(routingTable.begin(), routingTable.end(), [=, &matchedRows](RoutingTableRow& row) {
-        if (row.lifetime >= startLifetime && row.lifetime <= endLifetime) {
-            matchedRows.push_back(row);
-        }
-    });
-    return matchedRows;
+    tableToFilter.erase(std::remove_if(tableToFilter.begin(), tableToFilter.end(), [=](const RoutingTableRow& row) {
+            return row.lifetime < startLifetime || row.lifetime > endLifetime;
+     }), tableToFilter.end());
 }
 
 std::vector<RoutingTableRow> RoutingTable::matchWithAddress(const std::string& address) {

@@ -40,10 +40,7 @@ void filterByLifetime(RoutingTable* routingTable, std::vector<RoutingTableRow>& 
     if (end[0] == '-' && end[1] == '1'){
         end = std::to_string(std::numeric_limits<unsigned int>::max());
     }
-    std::vector<RoutingTableRow> tempFilteredTable = routingTable->matchLifetime(start, end);
-    std::for_each(tempFilteredTable.begin(), tempFilteredTable.end(), [&routingTableVector](RoutingTableRow& row) {
-        routingTableVector.push_back(row);
-    });
+    routingTable->matchLifetime(start, end, routingTableVector);
 }
 
 void filterByAddress(RoutingTable* routingTable, std::vector<RoutingTableRow>& routingTableVector) {
@@ -64,19 +61,20 @@ int main() {
         return 1;
     }
     std::vector<RoutingTableRow> loadedRoutingTable = routingTable->getRoutingTable();
-    std::vector<RoutingTableRow> routingTableVector;
+    std::vector<RoutingTableRow> routingTableVector = routingTable->getRoutingTable();
     std::cout << "Routing table loaded successfully!" << std::endl;
     std::string optionString;
     int option;
     do {
-        std::cout << "Options:\n\t[1] Filter by mathing IP address and lifetime (Current filtered table will be deleted!)" << std::endl;
-        std::cout << "\t[2] Filter by matching IP address (Current filtered table will be deleted!)" << std::endl;
-        std::cout << "\t[3] Filter by matching lifetime (Current filtered table will be deleted!)" << std::endl;
+        std::cout << "Options:\n\t[1] Filter by mathing IP address and lifetime" << std::endl;
+        std::cout << "\t[2] Filter by matching IP address" << std::endl;
+        std::cout << "\t[3] Filter by matching lifetime" << std::endl;
         std::cout << "\t[4] Save whole table to CSV" << std::endl;
         std::cout << "\t[5] Print whole routing table" << std::endl;
         std::cout << "\t[6] Save filtered routing table to CSV" << std::endl;
         std::cout << "\t[7] Print filtered routing table" << std::endl;
         std::cout << "\t[9] To exit program" << std::endl;
+        std::cout << "Your option: ";
         std::cin >> optionString;
         try {
             option = std::stoi(optionString);
@@ -86,18 +84,15 @@ int main() {
         std::string filename;
         switch (option) {
             case 1:
-                routingTableVector.clear();
                 filterByAddress(routingTable, routingTableVector);
                 filterByLifetime(routingTable, routingTableVector);
                 savingPrompt(routingTable, routingTableVector, filename);
                 break;
             case 2:
-                routingTableVector.clear();
                 filterByAddress(routingTable, routingTableVector);
                 savingPrompt(routingTable, routingTableVector, filename);
                 break;
             case 3:
-                routingTableVector.clear();
                 filterByLifetime(routingTable, routingTableVector);
                 savingPrompt(routingTable, routingTableVector, filename);
                 break;
