@@ -39,6 +39,7 @@ public:
     void saveToCSV(const std::string& filename, const std::vector<RoutingTableRow>& vectorToPrint);
     std::string convertLifetime(unsigned int lifetime);
     std::vector<RoutingTableRow> matchLifetime(const std::string& start, const std::string& end);
+    std::vector<RoutingTableRow> matchWithAddress(const std::string& address);
     std::vector<RoutingTableRow> getRoutingTable() { return routingTable; }
 };
 
@@ -116,7 +117,7 @@ void RoutingTable::loadFromCSV(const std::string& filename) {
 
 void RoutingTable::print(const std::vector<RoutingTableRow>& vectorToPrint) {
     std::for_each(vectorToPrint.begin(), vectorToPrint.end(), [=](const RoutingTableRow& row) {
-        std::cout << "===============================================" << std::endl;
+        std::cout << "==========================================" << std::endl;
         std::cout << "Destination: " << int(row.firstOctet) << "." << int(row.secondOctet) << "." << int(row.thirdOctet) << "." << int(row.fourthOctet) << "/" << int(row.prefix) << std::endl;
         std::cout << "Next Hop: " << int(row.nextHopFirstOctet) << "." << int(row.nextHopSecondOctet) << "." << int(row.nextHopThirdOctet) << "." << int(row.nextHopFourthOctet) << std::endl;
         std::cout << "Lifetime: ";
@@ -319,6 +320,17 @@ std::vector<RoutingTableRow> RoutingTable::matchLifetime(const std::string& star
     std::cout << "Selected lifetime: " << startLifetime << "(s) - " << endLifetime << "(s)" << std::endl;
     std::for_each(routingTable.begin(), routingTable.end(), [=, &matchedRows](RoutingTableRow& row) {
         if (row.lifetime >= startLifetime && row.lifetime <= endLifetime) {
+            matchedRows.push_back(row);
+        }
+    });
+    return matchedRows;
+}
+
+std::vector<RoutingTableRow> RoutingTable::matchWithAddress(const std::string& address) {
+    std::vector<RoutingTableRow> matchedRows;
+    std::vector<unsigned char> octets = this->processIPAddress(address);
+    std::for_each(routingTable.begin(), routingTable.end(), [=, &matchedRows](RoutingTableRow& row) {
+        if (row.firstOctet == octets[0] && row.secondOctet == octets[1] && row.thirdOctet == octets[2] && row.fourthOctet == octets[3] && row.prefix == octets[4]) {
             matchedRows.push_back(row);
         }
     });
