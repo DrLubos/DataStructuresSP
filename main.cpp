@@ -2,23 +2,23 @@
 
 void selectNameOfCSVFile(std::string& defaultName) {
     std::cin.ignore();
-    std::cout << "Insert filename (Press Enter to use default name '" << defaultName << "'): ";
+    std::cout << "Insert filename (Press 'Enter' to use default name '" << defaultName << "' or 'Escape' and then 'Enter' to abort): ";
     std::string filename;
     std::getline(std::cin, filename);
     if (filename.empty()) {
         filename = defaultName;
     }
+    if (!filename.empty() && filename[0] == '\x1b') {
+        defaultName = "";
+        return;
+    }
     if (filename.size() < 4 || filename.substr(filename.size() - 4) != ".csv") {
         filename += ".csv";
     }
-    defaultName = filename; 
+    defaultName = filename;
 }
 
-void savingPrompt(RoutingTable* routingTable, std::vector<RoutingTableRow>& routingTableVector, std::string& filename, bool autoPrint = true) {
-    if (autoPrint) {
-        routingTable->print(routingTableVector);
-    }
-    std::cout << "------------------------------------------\nFound " << routingTableVector.size() << " values." << std::endl;
+void savingPrompt(RoutingTable* routingTable, std::vector<RoutingTableRow>& routingTableVector, std::string& filename) {
     char choice;
     if (routingTableVector.size() > 0) {
         std::cout << "Do you want to save the filtered table to a CSV file? (y/n):";
@@ -26,8 +26,12 @@ void savingPrompt(RoutingTable* routingTable, std::vector<RoutingTableRow>& rout
         if (choice == 'y' || choice == 'Y') {
             filename = "RT_Filtered.csv";
             selectNameOfCSVFile(filename);
-            routingTable->saveToCSV(filename, routingTableVector);
-            std::cout << "Filtered routing table saved to " << filename << std::endl;
+            if (filename != "") {
+                routingTable->saveToCSV(filename, routingTableVector);
+                std::cout << "Filtered routing table saved to " << filename << std::endl;
+            } else {
+                std::cout << "Saving cancelled!" << std::endl;
+            }
         }
     }
 }
@@ -62,12 +66,11 @@ int main() {
         routingTable = nullptr;
         return 1;
     }
-    std::vector<RoutingTableRow> loadedRoutingTable = routingTable->getRoutingTable();
     std::vector<RoutingTableRow> routingTableVector = routingTable->getRoutingTable();
     std::cout << "Routing table loaded successfully!" << std::endl;
     std::string optionString;
     int option;
-    bool autoPrint = true;
+    bool autoPrintAndSavePrompt = true;
     do {
         std::cout << std::endl << "Options:\n\t[0] Filter by mathing IP address and lifetime" << std::endl;
         std::cout << "\t[1] Filter by matching IP address" << std::endl;
@@ -76,10 +79,12 @@ int main() {
         std::cout << "\t[4] Print whole routing table" << std::endl;
         std::cout << "\t[5] Save filtered routing table to CSV" << std::endl;
         std::cout << "\t[6] Print filtered routing table" << std::endl;
-        autoPrint ? std::cout << "\t[7] Disable auto printing filtered table" << std::endl : std::cout << "\t[7] Enable auto printing filtered table" << std::endl;
+        autoPrintAndSavePrompt ? std::cout << "\t[7] Disable auto printing and asking for save filtered table" << std::endl : std::cout << "\t[7] Enable auto printing and asking for save filtered table" << std::endl;
+        std::cout << "\t[8] Reset filtered table" << std::endl;
         std::cout << "\t[9] To exit program" << std::endl;
         std::cout << "Your option: ";
         std::cin >> optionString;
+        std::cout << "------------------------------------------" << std::endl;
         try {
             option = std::stoi(optionString);
         } catch (const std::exception& e) {
@@ -90,25 +95,41 @@ int main() {
             case 0:
                 filterByAddress(routingTable, routingTableVector);
                 filterByLifetime(routingTable, routingTableVector);
-                savingPrompt(routingTable, routingTableVector, filename, autoPrint);
+                if (autoPrintAndSavePrompt) {
+                    routingTable->print(routingTableVector);
+                    savingPrompt(routingTable, routingTableVector, filename);
+                }
+                std::cout << "------------------------------------------\nFound " << routingTableVector.size() << " values." << std::endl;
                 break;
             case 1:
                 filterByAddress(routingTable, routingTableVector);
-                savingPrompt(routingTable, routingTableVector, filename, autoPrint);
+                if (autoPrintAndSavePrompt) {
+                    routingTable->print(routingTableVector);
+                    savingPrompt(routingTable, routingTableVector, filename);
+                }
+                std::cout << "------------------------------------------\nFound " << routingTableVector.size() << " values." << std::endl;
                 break;
             case 2:
                 filterByLifetime(routingTable, routingTableVector);
-                savingPrompt(routingTable, routingTableVector, filename, autoPrint);
+                if (autoPrintAndSavePrompt) {
+                    routingTable->print(routingTableVector);
+                    savingPrompt(routingTable, routingTableVector, filename);
+                }
+                std::cout << "------------------------------------------\nFound " << routingTableVector.size() << " values." << std::endl;
                 break;
             case 3:
                 filename = "RT_Loaded.csv";
                 selectNameOfCSVFile(filename);
-                routingTable->saveToCSV(filename, loadedRoutingTable);
-                std::cout << "Loaded routing table saved to " << filename << std::endl;
+                if (filename == "") {
+                    std::cout << "Save cancelled!" << std::endl;
+                } else {
+                    routingTable->saveToCSV(filename, routingTable->getRoutingTable());
+                    std::cout << "Loaded routing table saved to " << filename << std::endl;
+                }
                 break;
             case 4:
-                routingTable->print(loadedRoutingTable);
-                std::cout << "------------------------------------------\nPrinted " << loadedRoutingTable.size() << " rows." << std::endl;
+                routingTable->print(routingTable->getRoutingTable());
+                std::cout << "------------------------------------------\nPrinted " << routingTable->getRoutingTable().size() << " rows." << std::endl;
                 break;
             case 5:
                 if (routingTableVector.size() > 0) {
@@ -126,8 +147,12 @@ int main() {
                 }
                 break;
             case 7:
-                autoPrint = !autoPrint;
-                autoPrint ? std::cout << "Auto printing filtered table enabled!" << std::endl : std::cout << "Auto printing filtered table disabled!" << std::endl;
+                autoPrintAndSavePrompt = !autoPrintAndSavePrompt;
+                autoPrintAndSavePrompt ? std::cout << "Auto printing filtered table enabled!" << std::endl : std::cout << "Auto printing filtered table disabled!" << std::endl;
+                break;
+            case 8:
+                routingTableVector = routingTable->getRoutingTable();
+                std::cout << "Filtered table reseted!" << std::endl;
                 break;
             case 9:
                 std::cout << "Exiting..." << std::endl;
