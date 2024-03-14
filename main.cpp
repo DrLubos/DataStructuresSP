@@ -18,7 +18,7 @@ void selectNameOfCSVFile(std::string& defaultName) {
     defaultName = filename;
 }
 
-void savingPrompt(RoutingTable* routingTable, std::vector<RoutingTableRow>& routingTableVector, std::string& filename) {
+void savingPrompt(RoutingTableOperations* routingTable, std::vector<RoutingTableRow>& routingTableVector, std::string& filename) {
     if (routingTableVector.size() > 0) {
         char choice;
         std::cout << "Do you want to save the filtered table to a CSV file? (y/n):";
@@ -36,7 +36,7 @@ void savingPrompt(RoutingTable* routingTable, std::vector<RoutingTableRow>& rout
     }
 }
 
-void filterByLifetime(RoutingTable* routingTable, std::vector<RoutingTableRow>& filteredRoutingTableVector, std::vector<RoutingTableRow>& loadedRT, Filter& filter) {
+void filterByLifetime(RoutingTableOperations* routingTable, std::vector<RoutingTableRow>& filteredRoutingTableVector, std::vector<RoutingTableRow>& loadedRT, Filter& filter) {
     std::string start;
     std::string end;
     std::cout << "Insert minimum possible starting lifetime (s) or (XwXdXhXmXs) or (HH:MM:SS): ";
@@ -61,7 +61,7 @@ void filterByLifetime(RoutingTable* routingTable, std::vector<RoutingTableRow>& 
     }, filteredRoutingTableVector);
 }
 
-void filterByAddress(RoutingTable* routingTable, std::vector<RoutingTableRow>& routingTableVector) {
+void filterByAddress(RoutingTableOperations* routingTable, std::vector<RoutingTableRow>& routingTableVector) {
     std::string ipAddressString;
     std::cout << "Insert IP address to filter: ";
     std::cin >> ipAddressString;
@@ -70,43 +70,18 @@ void filterByAddress(RoutingTable* routingTable, std::vector<RoutingTableRow>& r
 
 int main() {
     std::vector<RoutingTableRow> filteredRoutingTableVector;
-    RoutingTable* routingTable = new RoutingTable();
+    RoutingTableOperations* routingTable = new RoutingTableOperations();
+    std::vector<RoutingTableRow> loadedRoutingTable;
     try {
-        routingTable->loadFromCSV("RT.csv");
+        routingTable->loadFromCSV("RT.csv", loadedRoutingTable);
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
         delete routingTable;
         routingTable = nullptr;
         return 1;
     }
-    std::vector<RoutingTableRow> loadedRoutingTable = routingTable->getRoutingTable();
     std::cout << "Routing table loaded successfully!" << std::endl;
     Filter filter;
-    
-    // std::string zaciatok = "0";
-    // std::string koniec = "3600";
-    // std::vector<RoutingTableRow> routingTableVector;
-    // std::vector<RoutingTableRow> filteredRoutingTableVector;
-    // RoutingTable* routingTable = new RoutingTable();
-    // try {
-    //     routingTable->loadFromCSV("RT.csv");
-    // } catch (const std::exception& e) {
-    //     std::cerr << "Error: " << e.what() << std::endl;
-    //     delete routingTable;
-    //     routingTable = nullptr;
-    //     return 1;
-    // }
-    // std::cout << "Routing table loaded successfully!" << std::endl;
-    // Filter<std::vector<RoutingTableRow>::iterator> filter(routingTableVector.begin(), routingTableVector.end());
-    // filter.filterAndAppend([&](const RoutingTableRow& row) {
-    //     printf("Row lifetime: %d\n", row.lifetime);
-    //     return matchLifetime(row, 0, 3600);
-    // }, filteredRoutingTableVector);
-
-    std::cout << filteredRoutingTableVector.size() << std::endl;
-    for (auto i : filteredRoutingTableVector) {
-        std::cout << i.lifetime << std::endl;
-    }
     std::string optionString;
     int option;
     bool autoPrintAndSavePrompt = true;
@@ -162,13 +137,13 @@ int main() {
                 if (filename == "") {
                     std::cout << "Save cancelled!" << std::endl;
                 } else {
-                    routingTable->saveToCSV(filename, routingTable->getRoutingTable());
+                    routingTable->saveToCSV(filename, loadedRoutingTable);
                     std::cout << "Loaded routing table saved to " << filename << std::endl;
                 }
                 break;
             case 4:
-                routingTable->print(routingTable->getRoutingTable());
-                std::cout << "------------------------------------------\nPrinted " << routingTable->getRoutingTable().size() << " rows." << std::endl;
+                routingTable->print(loadedRoutingTable);
+                std::cout << "------------------------------------------\nPrinted " << loadedRoutingTable.size() << " rows." << std::endl;
                 break;
             case 5:
                 if (filteredRoutingTableVector.size() > 0) {
