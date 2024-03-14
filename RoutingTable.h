@@ -5,9 +5,13 @@
 #include <sstream>
 #include <iostream>
 #include <algorithm>
+#include <bitset>
 
 bool isStringNumeric(const std::string& str) {
     for (char c : str) {
+        if (c == '/') {
+            continue;
+        }
         if (!std::isdigit(c)) {
             return false;
         }
@@ -16,6 +20,7 @@ bool isStringNumeric(const std::string& str) {
 }
 
 struct RoutingTableRow {
+    std::bitset<32> ipAddress;
     unsigned int lifetime;
     unsigned char firstOctet;
     unsigned char secondOctet;
@@ -31,15 +36,17 @@ struct RoutingTableRow {
 class RoutingTable {
 private:
     std::vector<RoutingTableRow> routingTable;
+    std::vector<unsigned char> processIPAddressOld(const std::string& ipAddressString);
+    std::bitset<32> processIPAddress(const std::string& ipAddressString, int* prefix);
+    unsigned int processLifetime(const std::string& lifetimeString);
+    std::string convertLifetime(unsigned int lifetime);
 public:
     void loadFromCSV(const std::string& filename);
     void print(const std::vector<RoutingTableRow>& vectorToPrint);
-    std::vector<unsigned char> processIPAddress(const std::string& ipAddressString);
-    unsigned int processLifetime(const std::string& lifetimeString);
     void saveToCSV(const std::string& filename, const std::vector<RoutingTableRow>& vectorToPrint);
-    std::string convertLifetime(unsigned int lifetime);
     void matchLifetime(const std::string& start, const std::string& end, std::vector<RoutingTableRow>& tableToFilter);
-    std::vector<RoutingTableRow> matchWithAddress(const std::string& address);
+    void matchWithAddress(const std::string& address, std::vector<RoutingTableRow>& tableToFilter);
+    std::vector<RoutingTableRow> matchWithAddressOld(const std::string& address);
     std::vector<RoutingTableRow> getRoutingTable() { return routingTable; }
 };
 
@@ -61,7 +68,9 @@ void RoutingTable::loadFromCSV(const std::string& filename) {
         }
         if (cells.size() == 5 || cells.size() == 4) {
             RoutingTableRow entry;
-            std::vector<unsigned char> octets = this->processIPAddress(cells[1]);
+            unsigned char prefix = 0;
+            std::vector<unsigned char> octets = this->processIPAddressOld(cells[1]);
+            /*
             for (size_t i = 0; i < octets.size(); i++) {
                 switch (i) {
                 case 0:
@@ -77,13 +86,22 @@ void RoutingTable::loadFromCSV(const std::string& filename) {
                     entry.fourthOctet = octets[i];
                     break;
                 case 4:
-                    entry.prefix = octets[i];
+                    entry.prefix = prefix;
                     break;
                 }
             }
+            */
             octets.clear();
+            int tempPrefix = 0;
+            try {
+                entry.ipAddress = this->processIPAddress(cells[1], &tempPrefix);
+            } catch (const std::exception& e) {
+                std::cerr << "Error: " << e.what() << " Check line " << rowNumber << std::endl;
+                continue;
+            }
+            entry.prefix = tempPrefix;
             if (cells[3][0] == 'v' && cells[3][1] == 'i' && cells[3][2] == 'a') {
-                octets = cells[3][3] == ' ' ? this->processIPAddress(cells[3].substr(4)) : this->processIPAddress(cells[3].substr(3));
+                octets = cells[3][3] == ' ' ? this->processIPAddressOld(cells[3].substr(4)) : this->processIPAddressOld(cells[3].substr(3));
                 for (size_t i = 0; i < octets.size(); i++) {
                     switch (i) {
                     case 0:
@@ -101,9 +119,9 @@ void RoutingTable::loadFromCSV(const std::string& filename) {
                     }
                 }
             } else {
-                std::cout << "Supported only next-hop ip address";
+                std::cout << "Supported only next-hop ip address, check line " << rowNumber << std::endl;
             }
-            if (cells.size() > 4 && (isdigit(cells[4][0]) || isalpha(cells[4][0]))) {
+            if (cells.size() > 4 && (std::isdigit(cells[4][0]) || std::isalpha(cells[4][0]))) {
                 entry.lifetime = this->processLifetime(cells[4]);
             } else {
                 entry.lifetime = UINT_MAX;
@@ -122,10 +140,18 @@ void RoutingTable::print(const std::vector<RoutingTableRow>& vectorToPrint) {
         std::cout << "Next Hop: " << int(row.nextHopFirstOctet) << "." << int(row.nextHopSecondOctet) << "." << int(row.nextHopThirdOctet) << "." << int(row.nextHopFourthOctet) << std::endl;
         std::cout << "Lifetime: ";
         row.lifetime > 59 ? std::cout << row.lifetime << "(s) " << this->convertLifetime(row.lifetime) << std::endl : std::cout << row.lifetime << "s" << std::endl;
+        std::cout << "IP Address: ";
+        for (size_t i = 0; i < row.ipAddress.size(); i += 8) {
+            std::cout << std::bitset<8>(row.ipAddress.to_ulong() >> i).to_ulong();
+            if (i + 8 < row.ipAddress.size()) {
+                std::cout << ".";
+            }
+        }
+        std::cout << std::endl;
     });
 }
 
-std::vector<unsigned char> RoutingTable::processIPAddress(const std::string& ipAddressString) {
+std::vector<unsigned char> RoutingTable::processIPAddressOld(const std::string& ipAddressString) {
     std::vector<unsigned char> octets;
     std::istringstream iss(ipAddressString);
     std::string octetString;
@@ -154,7 +180,7 @@ unsigned int RoutingTable::processLifetime(const std::string& lifetimeString) {
     bool hoursMuliply = true;
     bool minutesMuliply = true;
     size_t i = 0;
-    if (lifetimeString.size() > 0 && !isdigit(lifetimeString[0])) {
+    if (lifetimeString.size() > 0 && !std::isdigit(lifetimeString[0])) {
         switch (lifetimeString[0]) {
             case 'w':
                 lifetime.push_back(60 * 60 * 24 * 7);
@@ -178,10 +204,10 @@ unsigned int RoutingTable::processLifetime(const std::string& lifetimeString) {
     }
     for (; i < lifetimeString.size(); i++) {
         char charValue = lifetimeString[i];
-        if (isdigit(charValue)) {
+        if (std::isdigit(charValue)) {
             processingNumber += std::atoi(&charValue);
             if (i + 1 < lifetimeString.size()) {
-                if (isdigit(lifetimeString[i + 1])) {
+                if (std::isdigit(lifetimeString[i + 1])) {
                     processingNumber *= 10;
                     continue;
                 } else if (lifetimeString[i + 1] == ':') {
@@ -322,13 +348,54 @@ void RoutingTable::matchLifetime(const std::string& start, const std::string& en
      }), tableToFilter.end());
 }
 
-std::vector<RoutingTableRow> RoutingTable::matchWithAddress(const std::string& address) {
+std::vector<RoutingTableRow> RoutingTable::matchWithAddressOld(const std::string& address) {
     std::vector<RoutingTableRow> matchedRows;
-    std::vector<unsigned char> octets = this->processIPAddress(address);
+    std::vector<unsigned char> octets = this->processIPAddressOld(address);
     std::for_each(routingTable.begin(), routingTable.end(), [=, &matchedRows](RoutingTableRow& row) {
-        if (row.firstOctet == octets[0] && row.secondOctet == octets[1] && row.thirdOctet == octets[2] && row.fourthOctet == octets[3] && row.prefix == octets[4]) {
+        if (row.firstOctet == octets[0] && row.secondOctet == octets[1] && row.thirdOctet == octets[2] && row.fourthOctet == octets[3]) {
             matchedRows.push_back(row);
         }
     });
     return matchedRows;
+}
+
+std::bitset<32> RoutingTable::processIPAddress(const std::string& ipAddressString, int* prefix) {
+    std::bitset<32> ipAddressBits;
+    std::istringstream iss(ipAddressString);
+    std::string octetString;
+    int index = 0;
+    while (std::getline(iss, octetString, '.')) {
+        if (!isStringNumeric(octetString)) {
+            std::cout << octetString << std::endl;
+            throw std::runtime_error("Error: Invalid IP address format.\n");
+        }
+        int octet = std::stoi(octetString);
+        if (octet >= 0 && octet < 256) {
+            ipAddressBits |= (std::bitset<32>(octet) << (24 - index * 8));
+        }
+        index++;
+    }
+    size_t startingPrefixIndex = ipAddressString.find('/');
+    if (startingPrefixIndex != std::string::npos) {
+        std::string prefixString = ipAddressString.substr(startingPrefixIndex + 1);
+        if (!isStringNumeric(prefixString)) {
+            throw std::runtime_error("Error: Invalid prefix format.\n");
+        }
+        int prefixValue = std::stoi(prefixString);
+        if (prefixValue < 0 || prefixValue > 32) {
+            throw std::runtime_error("Error: Invalid prefix value.\n");
+        }
+        if (prefix != nullptr) {
+            *prefix = prefixValue;
+        }
+    }
+    return ipAddressBits;
+}
+
+void RoutingTable::matchWithAddress(const std::string& address, std::vector<RoutingTableRow>& tableToFilter) {
+    std::bitset<32> filteringByIP = this->processIPAddress(address, nullptr);
+    auto lambdaFunction = [=](const RoutingTableRow& row) {
+        
+    };
+    //tableToFilter.erase(std::remove_if(tableToFilter.begin(), tableToFilter.end(), lambdaFunction), tableToFilter.end());
 }

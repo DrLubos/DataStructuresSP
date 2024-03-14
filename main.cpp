@@ -19,8 +19,8 @@ void selectNameOfCSVFile(std::string& defaultName) {
 }
 
 void savingPrompt(RoutingTable* routingTable, std::vector<RoutingTableRow>& routingTableVector, std::string& filename) {
-    char choice;
     if (routingTableVector.size() > 0) {
+        char choice;
         std::cout << "Do you want to save the filtered table to a CSV file? (y/n):";
         std::cin >> choice;
         if (choice == 'y' || choice == 'Y') {
@@ -53,7 +53,7 @@ void filterByAddress(RoutingTable* routingTable, std::vector<RoutingTableRow>& r
     std::string ipAddressString;
     std::cout << "Insert IP address to filter: ";
     std::cin >> ipAddressString;
-    routingTableVector = routingTable->matchWithAddress(ipAddressString);
+    routingTable->matchWithAddress(ipAddressString, routingTableVector);
 }
 
 int main() {
