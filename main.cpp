@@ -47,6 +47,7 @@ void filterByLifetime(RoutingTable* routingTable, std::vector<RoutingTableRow>& 
         end = std::to_string(std::numeric_limits<unsigned int>::max());
     }
     routingTable->matchLifetime(start, end, routingTableVector);
+
 }
 
 void filterByAddress(RoutingTable* routingTable, std::vector<RoutingTableRow>& routingTableVector) {
@@ -57,6 +58,8 @@ void filterByAddress(RoutingTable* routingTable, std::vector<RoutingTableRow>& r
 }
 
 int main() {
+    std::vector<RoutingTableRow> routingTableVector;
+    std::vector<RoutingTableRow> filteredRoutingTableVector;
     RoutingTable* routingTable = new RoutingTable();
     try {
         routingTable->loadFromCSV("RT.csv");
@@ -66,8 +69,39 @@ int main() {
         routingTable = nullptr;
         return 1;
     }
-    std::vector<RoutingTableRow> routingTableVector = routingTable->getRoutingTable();
     std::cout << "Routing table loaded successfully!" << std::endl;
+
+    
+    //routingTable->fillVector(routingTableVector); 
+    routingTableVector= routingTable->getRoutingTable();
+    Filter filter;
+    filter.filterAndAppend(routingTableVector.begin(), routingTableVector.end(), [&](const RoutingTableRow& row) {
+        return matchLifetime(row, 0, 3600);
+    }, filteredRoutingTableVector);
+    // std::string zaciatok = "0";
+    // std::string koniec = "3600";
+    // std::vector<RoutingTableRow> routingTableVector;
+    // std::vector<RoutingTableRow> filteredRoutingTableVector;
+    // RoutingTable* routingTable = new RoutingTable();
+    // try {
+    //     routingTable->loadFromCSV("RT.csv");
+    // } catch (const std::exception& e) {
+    //     std::cerr << "Error: " << e.what() << std::endl;
+    //     delete routingTable;
+    //     routingTable = nullptr;
+    //     return 1;
+    // }
+    // std::cout << "Routing table loaded successfully!" << std::endl;
+    // Filter<std::vector<RoutingTableRow>::iterator> filter(routingTableVector.begin(), routingTableVector.end());
+    // filter.filterAndAppend([&](const RoutingTableRow& row) {
+    //     printf("Row lifetime: %d\n", row.lifetime);
+    //     return matchLifetime(row, 0, 3600);
+    // }, filteredRoutingTableVector);
+
+    std::cout << filteredRoutingTableVector.size() << std::endl;
+    for (auto i : filteredRoutingTableVector) {
+        std::cout << i.lifetime << std::endl;
+    }
     std::string optionString;
     int option;
     bool autoPrintAndSavePrompt = true;

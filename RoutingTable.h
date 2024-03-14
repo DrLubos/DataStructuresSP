@@ -6,6 +6,7 @@
 #include <iostream>
 #include <algorithm>
 #include <bitset>
+#include <functional>
 
 bool isStringNumeric(const std::string& str) {
     for (char c : str) {
@@ -36,11 +37,11 @@ struct RoutingTableRow {
 class RoutingTable {
 private:
     std::vector<RoutingTableRow> routingTable;
+public:
     std::vector<unsigned char> processIPAddressOld(const std::string& ipAddressString);
     std::bitset<32> processIPAddress(const std::string& ipAddressString, int* prefix);
     unsigned int processLifetime(const std::string& lifetimeString);
     std::string convertLifetime(unsigned int lifetime);
-public:
     void loadFromCSV(const std::string& filename);
     void print(const std::vector<RoutingTableRow>& vectorToPrint);
     void saveToCSV(const std::string& filename, const std::vector<RoutingTableRow>& vectorToPrint);
@@ -49,6 +50,66 @@ public:
     std::vector<RoutingTableRow> matchWithAddressOld(const std::string& address);
     std::vector<RoutingTableRow> getRoutingTable() { return routingTable; }
 };
+
+auto matchLifetime = [](const RoutingTableRow& row, int startTime, int endTime) {
+    std::cout << "Lambda function called" << std::endl;
+    if (row.lifetime >= startTime && row.lifetime <= endTime) {
+        return true;
+    }
+    return false;
+};
+
+class Filter {
+public:
+    Filter() {}
+    template<typename Iterator>
+    void filterAndAppend(Iterator begin, Iterator end, std::function<bool(const RoutingTableRow&)> pred, std::vector<RoutingTableRow>& output) {
+        std::cout<< "Filtering" << std::endl;
+        for (auto it = begin; it != end; ++it) {
+            if (pred(*it)) {
+                output.push_back(*it);
+            }
+        }
+    }
+    //auto matchLifetimeNew2(std::string& start, std::string& end, std::vector<RoutingTableRow>& tableToFilter);
+    //std::function<bool(RoutingTable&)> matchLifetimeNew(std::string& start, std::string& end, std::vector<RoutingTableRow>& tableToFilter);
+};
+
+// template<typename Iterator>
+// auto Filter<Iterator>::matchLifetimeNew2(std::string& start, std::string& end, std::vector<RoutingTableRow>& tableToFilter) {
+//     return [=](RoutingTable& routingTable) {
+//         unsigned int startLifetime = isStringNumeric(start) ? std::stoul(start) : routingTable.processLifetime(start);
+//         unsigned int endLifetime = isStringNumeric(end) ? std::stoul(end) : routingTable.processLifetime(end);
+//         if (startLifetime > endLifetime) {
+//             std::swap(startLifetime, endLifetime);
+//         }
+//         std::cout << "Selected lifetime: " << startLifetime << "(s) - " << endLifetime << "(s)" << std::endl;
+//         for (auto i = tableToFilter.begin(); i != tableToFilter.end(); i++) {
+//             if (i->lifetime >= startLifetime && i->lifetime <= endLifetime) {
+//                 tableToFilter.push_back(i);
+//             }
+//         }
+//     };
+// }
+
+// template<typename Iterator>
+// std::function<bool(RoutingTable&)> Filter<Iterator>::matchLifetimeNew(std::string& start, std::string& end, std::vector<RoutingTableRow>& tableToFilter) {
+//     unsigned int startLifetime = isStringNumeric(start) ? std::stoul(start) : this->processLifetime(start);
+//     unsigned int endLifetime = isStringNumeric(end) ? std::stoul(end) : this->processLifetime(end);
+//     if (startLifetime > endLifetime) {
+//         std::swap(startLifetime, endLifetime);
+//     }
+//     std::cout << "Selected lifetime: " << startLifetime << "(s) - " << endLifetime << "(s)" << std::endl;
+//     return [=](RoutingTable& routingTable) {
+//         for (auto i = routingTable.getRoutingTable().begin(); i != routingTable.getRoutingTable().end(); i++) {
+//             if (i->lifetime >= startLifetime && i->lifetime <= endLifetime) {
+//                 return true;
+//             }
+//         }
+//         return false;
+//     };
+// }
+
 
 void RoutingTable::loadFromCSV(const std::string& filename) {
     std::ifstream file(filename);
