@@ -10,7 +10,16 @@
 
 bool isStringNumeric(const std::string& str) {
     for (char c : str) {
-        if (c == '/') {
+        if (!std::isdigit(c)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool isStringIPMaskFormat(const std::string& str) {
+    for (char c : str) {
+        if (c == '/' || c == '.' || c == ' ') {
             continue;
         }
         if (!std::isdigit(c)) {
@@ -18,7 +27,7 @@ bool isStringNumeric(const std::string& str) {
         }
     }
     return true;
-}
+} 
 
 struct RoutingTableRow {
     std::bitset<32> ipAddress;
@@ -36,7 +45,7 @@ struct RoutingTableRow {
 
 class RoutingTable {
 private:
-    std::vector<RoutingTableRow> routingTable;
+    std::vector<RoutingTableRow> loadedRoutingTable;
 public:
     std::vector<unsigned char> processIPAddressOld(const std::string& ipAddressString);
     std::bitset<32> processIPAddress(const std::string& ipAddressString, unsigned char* prefix);
@@ -46,11 +55,11 @@ public:
     void print(const std::vector<RoutingTableRow>& vectorToPrint);
     void saveToCSV(const std::string& filename, const std::vector<RoutingTableRow>& vectorToPrint);
     void matchLifetime(const std::string& start, const std::string& end, std::vector<RoutingTableRow>& tableToFilter);
-    std::vector<RoutingTableRow> getRoutingTable() { return routingTable; }
+    std::vector<RoutingTableRow> getRoutingTable() { return loadedRoutingTable; }
 };
 
-auto matchLifetime = [](const RoutingTableRow& row, int startTime, int endTime) {
-    std::cout << "Lambda function called" << std::endl;
+auto matchLifetime = [](const RoutingTableRow& row, unsigned int startTime, unsigned int endTime) {
+    //std::cout << "Lambda function called" << std::endl;
     if (row.lifetime >= startTime && row.lifetime <= endTime) {
         return true;
     }
@@ -67,10 +76,12 @@ public:
     template<typename Iterator>
     void filterAndAppend(Iterator begin, Iterator end, std::function<bool(const RoutingTableRow&)> pred, std::vector<RoutingTableRow>& output) {
         std::cout<< "Filtering" << std::endl;
+        int i = 0;
         for (auto it = begin; it != end; ++it) {
             if (pred(*it)) {
                 output.push_back(*it);
             }
+            std::cout << i++ << std::endl;
         }
     }
 };
@@ -149,7 +160,7 @@ void RoutingTable::loadFromCSV(const std::string& filename) {
             } else {
                 entry.lifetime = UINT_MAX;
             }
-            routingTable.push_back(entry);
+            loadedRoutingTable.push_back(entry);
         } else {
             throw std::runtime_error("Error: Invalid CSV format. Error found on line: " + std::to_string(rowNumber) + "\n");
         }
@@ -377,7 +388,7 @@ std::bitset<32> RoutingTable::processIPAddress(const std::string& ipAddressStrin
     std::string octetString;
     int index = 0;
     while (std::getline(iss, octetString, '.')) {
-        if (!isStringNumeric(octetString)) {
+        if (!isStringIPMaskFormat(octetString)) {
             std::cout << octetString << std::endl;
             throw std::runtime_error("Error: Invalid IP address format.\n");
         }
@@ -390,7 +401,7 @@ std::bitset<32> RoutingTable::processIPAddress(const std::string& ipAddressStrin
     size_t startingPrefixIndex = ipAddressString.find('/');
     if (startingPrefixIndex != std::string::npos) {
         std::string prefixString = ipAddressString.substr(startingPrefixIndex + 1);
-        if (!isStringNumeric(prefixString)) {
+        if (!isStringIPMaskFormat(prefixString)) {
             throw std::runtime_error("Error: Invalid prefix format.\n");
         }
         int prefixValue = std::stoi(prefixString);

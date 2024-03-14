@@ -36,18 +36,29 @@ void savingPrompt(RoutingTable* routingTable, std::vector<RoutingTableRow>& rout
     }
 }
 
-void filterByLifetime(RoutingTable* routingTable, std::vector<RoutingTableRow>& routingTableVector) {
+void filterByLifetime(RoutingTable* routingTable, std::vector<RoutingTableRow>& filteredRoutingTableVector, std::vector<RoutingTableRow>& loadedRT, Filter& filter) {
     std::string start;
     std::string end;
     std::cout << "Insert minimum possible starting lifetime (s) or (XwXdXhXmXs) or (HH:MM:SS): ";
     std::cin >> start;
+    unsigned int startLifetime = isStringNumeric(start) ? std::stoul(start) : routingTable->processLifetime(start);
     std::cout << "Insert maximum possible ending lifetime (s) or (XwXdXhXmXs) or (HH:MM:SS) or (-1) to check without maximum possible ending: ";
     std::cin >> end;
+    unsigned int endLifetime;
     if (end[0] == '-' && end[1] == '1'){
-        end = std::to_string(std::numeric_limits<unsigned int>::max());
+        endLifetime = std::numeric_limits<unsigned int>::max();
+    } else if (isStringNumeric(end)) {
+        endLifetime = std::stoul(end);
+    } else {
+        endLifetime = routingTable->processLifetime(end);
     }
-    routingTable->matchLifetime(start, end, routingTableVector);
-
+    if (startLifetime > endLifetime) {
+        std::swap(startLifetime, endLifetime);
+    }
+    std::cout << "Selected lifetime: " << startLifetime << "(s) - " << endLifetime << "(s)" << std::endl;
+    filter.filterAndAppend(loadedRT.begin(), loadedRT.end(), [&](const RoutingTableRow& row) {
+        return matchLifetime(row, startLifetime, endLifetime);
+    }, filteredRoutingTableVector);
 }
 
 void filterByAddress(RoutingTable* routingTable, std::vector<RoutingTableRow>& routingTableVector) {
@@ -58,7 +69,6 @@ void filterByAddress(RoutingTable* routingTable, std::vector<RoutingTableRow>& r
 }
 
 int main() {
-    std::vector<RoutingTableRow> routingTableVector;
     std::vector<RoutingTableRow> filteredRoutingTableVector;
     RoutingTable* routingTable = new RoutingTable();
     try {
@@ -69,15 +79,10 @@ int main() {
         routingTable = nullptr;
         return 1;
     }
+    std::vector<RoutingTableRow> loadedRoutingTable = routingTable->getRoutingTable();
     std::cout << "Routing table loaded successfully!" << std::endl;
-
-    
-    //routingTable->fillVector(routingTableVector); 
-    routingTableVector= routingTable->getRoutingTable();
     Filter filter;
-    filter.filterAndAppend(routingTableVector.begin(), routingTableVector.end(), [&](const RoutingTableRow& row) {
-        return matchLifetime(row, 0, 3600);
-    }, filteredRoutingTableVector);
+    
     // std::string zaciatok = "0";
     // std::string koniec = "3600";
     // std::vector<RoutingTableRow> routingTableVector;
@@ -114,7 +119,7 @@ int main() {
         std::cout << "\t[5] Save filtered routing table to CSV" << std::endl;
         std::cout << "\t[6] Print filtered routing table" << std::endl;
         autoPrintAndSavePrompt ? std::cout << "\t[7] Disable auto printing and asking for save filtered table" << std::endl : std::cout << "\t[7] Enable auto printing and asking for save filtered table" << std::endl;
-        std::cout << "\t[8] Reset filtered table" << std::endl;
+        std::cout << "\t[8] Clear filtered table" << std::endl;
         std::cout << "\t[9] To exit program" << std::endl;
         std::cout << "Your option: ";
         std::cin >> optionString;
@@ -127,29 +132,29 @@ int main() {
         std::string filename;
         switch (option) {
             case 0:
-                filterByAddress(routingTable, routingTableVector);
-                filterByLifetime(routingTable, routingTableVector);
+                //filterByAddress(routingTable, routingTableVector);
+                filterByLifetime(routingTable, filteredRoutingTableVector, loadedRoutingTable, filter);
                 if (autoPrintAndSavePrompt) {
-                    routingTable->print(routingTableVector);
-                    savingPrompt(routingTable, routingTableVector, filename);
+                    routingTable->print(filteredRoutingTableVector);
+                    savingPrompt(routingTable, filteredRoutingTableVector, filename);
                 }
-                std::cout << "------------------------------------------\nFound " << routingTableVector.size() << " values." << std::endl;
+                std::cout << "------------------------------------------\nFound " << filteredRoutingTableVector.size() << " values." << std::endl;
                 break;
             case 1:
-                filterByAddress(routingTable, routingTableVector);
+                filterByAddress(routingTable, filteredRoutingTableVector);
                 if (autoPrintAndSavePrompt) {
-                    routingTable->print(routingTableVector);
-                    savingPrompt(routingTable, routingTableVector, filename);
+                    routingTable->print(filteredRoutingTableVector);
+                    savingPrompt(routingTable, filteredRoutingTableVector, filename);
                 }
-                std::cout << "------------------------------------------\nFound " << routingTableVector.size() << " values." << std::endl;
+                std::cout << "------------------------------------------\nFound " << filteredRoutingTableVector.size() << " values." << std::endl;
                 break;
             case 2:
-                filterByLifetime(routingTable, routingTableVector);
+                filterByLifetime(routingTable, filteredRoutingTableVector, loadedRoutingTable, filter);
                 if (autoPrintAndSavePrompt) {
-                    routingTable->print(routingTableVector);
-                    savingPrompt(routingTable, routingTableVector, filename);
+                    routingTable->print(filteredRoutingTableVector);
+                    savingPrompt(routingTable, filteredRoutingTableVector, filename);
                 }
-                std::cout << "------------------------------------------\nFound " << routingTableVector.size() << " values." << std::endl;
+                std::cout << "------------------------------------------\nFound " << filteredRoutingTableVector.size() << " values." << std::endl;
                 break;
             case 3:
                 filename = "RT_Loaded.csv";
@@ -166,16 +171,16 @@ int main() {
                 std::cout << "------------------------------------------\nPrinted " << routingTable->getRoutingTable().size() << " rows." << std::endl;
                 break;
             case 5:
-                if (routingTableVector.size() > 0) {
-                    savingPrompt(routingTable, routingTableVector, filename);
+                if (filteredRoutingTableVector.size() > 0) {
+                    savingPrompt(routingTable, filteredRoutingTableVector, filename);
                 } else {
                     std::cout << "No filtered routing table values to save!" << std::endl;
                 }
                 break;
             case 6:
-                if (routingTableVector.size() > 0) {
-                    routingTable->print(routingTableVector);
-                    std::cout << "------------------------------------------\nPrinted " << routingTableVector.size() << " rows." << std::endl;
+                if (filteredRoutingTableVector.size() > 0) {
+                    routingTable->print(filteredRoutingTableVector);
+                    std::cout << "------------------------------------------\nPrinted " << filteredRoutingTableVector.size() << " rows." << std::endl;
                 } else {
                     std::cout << "No filtered routing table values to print!" << std::endl;
                 }
@@ -185,8 +190,8 @@ int main() {
                 autoPrintAndSavePrompt ? std::cout << "Auto printing filtered table enabled!" << std::endl : std::cout << "Auto printing filtered table disabled!" << std::endl;
                 break;
             case 8:
-                routingTableVector = routingTable->getRoutingTable();
-                std::cout << "Filtered table reseted!" << std::endl;
+                filteredRoutingTableVector.clear();
+                std::cout << "Filtered table is cleared!" << std::endl;
                 break;
             case 9:
                 std::cout << "Exiting..." << std::endl;
