@@ -54,7 +54,7 @@ void filterByAddress(RoutingTable* routingTable, std::vector<RoutingTableRow>& r
     std::string ipAddressString;
     std::cout << "Insert IP address to filter: ";
     std::cin >> ipAddressString;
-    routingTable->matchWithAddress(ipAddressString, routingTableVector);
+    //routingTable->matchWithAddress(ipAddressString, routingTableVector);
 }
 
 int main() {

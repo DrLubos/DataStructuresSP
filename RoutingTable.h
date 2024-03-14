@@ -17,7 +17,7 @@ bool isStringNumeric(const std::string& str) {
             return false;
         }
     }
-    return true; 
+    return true;
 }
 
 struct RoutingTableRow {
@@ -39,15 +39,13 @@ private:
     std::vector<RoutingTableRow> routingTable;
 public:
     std::vector<unsigned char> processIPAddressOld(const std::string& ipAddressString);
-    std::bitset<32> processIPAddress(const std::string& ipAddressString, int* prefix);
+    std::bitset<32> processIPAddress(const std::string& ipAddressString, unsigned char* prefix);
     unsigned int processLifetime(const std::string& lifetimeString);
     std::string convertLifetime(unsigned int lifetime);
     void loadFromCSV(const std::string& filename);
     void print(const std::vector<RoutingTableRow>& vectorToPrint);
     void saveToCSV(const std::string& filename, const std::vector<RoutingTableRow>& vectorToPrint);
     void matchLifetime(const std::string& start, const std::string& end, std::vector<RoutingTableRow>& tableToFilter);
-    void matchWithAddress(const std::string& address, std::vector<RoutingTableRow>& tableToFilter);
-    std::vector<RoutingTableRow> matchWithAddressOld(const std::string& address);
     std::vector<RoutingTableRow> getRoutingTable() { return routingTable; }
 };
 
@@ -56,6 +54,10 @@ auto matchLifetime = [](const RoutingTableRow& row, int startTime, int endTime) 
     if (row.lifetime >= startTime && row.lifetime <= endTime) {
         return true;
     }
+    return false;
+};
+
+auto matchWithAddress = [](const RoutingTableRow& row, const std::string& addressToCompare) {
     return false;
 };
 
@@ -71,45 +73,7 @@ public:
             }
         }
     }
-    //auto matchLifetimeNew2(std::string& start, std::string& end, std::vector<RoutingTableRow>& tableToFilter);
-    //std::function<bool(RoutingTable&)> matchLifetimeNew(std::string& start, std::string& end, std::vector<RoutingTableRow>& tableToFilter);
 };
-
-// template<typename Iterator>
-// auto Filter<Iterator>::matchLifetimeNew2(std::string& start, std::string& end, std::vector<RoutingTableRow>& tableToFilter) {
-//     return [=](RoutingTable& routingTable) {
-//         unsigned int startLifetime = isStringNumeric(start) ? std::stoul(start) : routingTable.processLifetime(start);
-//         unsigned int endLifetime = isStringNumeric(end) ? std::stoul(end) : routingTable.processLifetime(end);
-//         if (startLifetime > endLifetime) {
-//             std::swap(startLifetime, endLifetime);
-//         }
-//         std::cout << "Selected lifetime: " << startLifetime << "(s) - " << endLifetime << "(s)" << std::endl;
-//         for (auto i = tableToFilter.begin(); i != tableToFilter.end(); i++) {
-//             if (i->lifetime >= startLifetime && i->lifetime <= endLifetime) {
-//                 tableToFilter.push_back(i);
-//             }
-//         }
-//     };
-// }
-
-// template<typename Iterator>
-// std::function<bool(RoutingTable&)> Filter<Iterator>::matchLifetimeNew(std::string& start, std::string& end, std::vector<RoutingTableRow>& tableToFilter) {
-//     unsigned int startLifetime = isStringNumeric(start) ? std::stoul(start) : this->processLifetime(start);
-//     unsigned int endLifetime = isStringNumeric(end) ? std::stoul(end) : this->processLifetime(end);
-//     if (startLifetime > endLifetime) {
-//         std::swap(startLifetime, endLifetime);
-//     }
-//     std::cout << "Selected lifetime: " << startLifetime << "(s) - " << endLifetime << "(s)" << std::endl;
-//     return [=](RoutingTable& routingTable) {
-//         for (auto i = routingTable.getRoutingTable().begin(); i != routingTable.getRoutingTable().end(); i++) {
-//             if (i->lifetime >= startLifetime && i->lifetime <= endLifetime) {
-//                 return true;
-//             }
-//         }
-//         return false;
-//     };
-// }
-
 
 void RoutingTable::loadFromCSV(const std::string& filename) {
     std::ifstream file(filename);
@@ -153,17 +117,15 @@ void RoutingTable::loadFromCSV(const std::string& filename) {
             }
             */
             octets.clear();
-            int tempPrefix = 0;
             try {
-                entry.ipAddress = this->processIPAddress(cells[1], &tempPrefix);
+                entry.ipAddress = this->processIPAddress(cells[1], &entry.prefix);
             } catch (const std::exception& e) {
                 std::cerr << "Error: " << e.what() << " Check line " << rowNumber << std::endl;
                 continue;
             }
-            entry.prefix = tempPrefix;
             if (cells[3][0] == 'v' && cells[3][1] == 'i' && cells[3][2] == 'a') {
                 octets = cells[3][3] == ' ' ? this->processIPAddressOld(cells[3].substr(4)) : this->processIPAddressOld(cells[3].substr(3));
-                for (size_t i = 0; i < octets.size(); i++) {
+                for (size_t i = 0; i < octets.size(); ++i) {
                     switch (i) {
                     case 0:
                         entry.nextHopFirstOctet = octets[i];
@@ -263,7 +225,7 @@ unsigned int RoutingTable::processLifetime(const std::string& lifetimeString) {
                 return 1;
         }
     }
-    for (; i < lifetimeString.size(); i++) {
+    for (; i < lifetimeString.size(); ++i) {
         char charValue = lifetimeString[i];
         if (std::isdigit(charValue)) {
             processingNumber += std::atoi(&charValue);
@@ -385,7 +347,7 @@ void RoutingTable::saveToCSV(const std::string& filename, const std::vector<Rout
     std::ofstream file(filename);
     if (file.is_open()) {
         file << "Destination;Next-Hop;Lifetime\n";
-        for (size_t i = 0; i < vectorToPrint.size(); i++) {
+        for (size_t i = 0; i < vectorToPrint.size(); ++i) {
             file << int(vectorToPrint[i].firstOctet) << "." << int(vectorToPrint[i].secondOctet) << "." << int(vectorToPrint[i].thirdOctet) << "." << int(vectorToPrint[i].fourthOctet) << "/" << int(vectorToPrint[i].prefix);
             file << ";via " << int(vectorToPrint[i].nextHopFirstOctet) << "." << int(vectorToPrint[i].nextHopSecondOctet) << "." << int(vectorToPrint[i].nextHopThirdOctet) << "." << int(vectorToPrint[i].nextHopFourthOctet);
             file << ";" << this->convertLifetime(vectorToPrint[i].lifetime);
@@ -409,18 +371,7 @@ void RoutingTable::matchLifetime(const std::string& start, const std::string& en
      }), tableToFilter.end());
 }
 
-std::vector<RoutingTableRow> RoutingTable::matchWithAddressOld(const std::string& address) {
-    std::vector<RoutingTableRow> matchedRows;
-    std::vector<unsigned char> octets = this->processIPAddressOld(address);
-    std::for_each(routingTable.begin(), routingTable.end(), [=, &matchedRows](RoutingTableRow& row) {
-        if (row.firstOctet == octets[0] && row.secondOctet == octets[1] && row.thirdOctet == octets[2] && row.fourthOctet == octets[3]) {
-            matchedRows.push_back(row);
-        }
-    });
-    return matchedRows;
-}
-
-std::bitset<32> RoutingTable::processIPAddress(const std::string& ipAddressString, int* prefix) {
+std::bitset<32> RoutingTable::processIPAddress(const std::string& ipAddressString, unsigned char* prefix) {
     std::bitset<32> ipAddressBits;
     std::istringstream iss(ipAddressString);
     std::string octetString;
@@ -451,12 +402,4 @@ std::bitset<32> RoutingTable::processIPAddress(const std::string& ipAddressStrin
         }
     }
     return ipAddressBits;
-}
-
-void RoutingTable::matchWithAddress(const std::string& address, std::vector<RoutingTableRow>& tableToFilter) {
-    std::bitset<32> filteringByIP = this->processIPAddress(address, nullptr);
-    auto lambdaFunction = [=](const RoutingTableRow& row) {
-        
-    };
-    //tableToFilter.erase(std::remove_if(tableToFilter.begin(), tableToFilter.end(), lambdaFunction), tableToFilter.end());
 }
