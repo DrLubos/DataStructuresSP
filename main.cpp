@@ -61,11 +61,13 @@ void filterByLifetime(RoutingTableOperations* routingTable, std::vector<RoutingT
     }, filteredRoutingTableVector);
 }
 
-void filterByAddress(RoutingTableOperations* routingTable, std::vector<RoutingTableRow>& routingTableVector) {
+void filterByAddress(RoutingTableOperations* routingTable, std::vector<RoutingTableRow>& filteredRoutingTableVector, std::vector<RoutingTableRow>& loadedRT, Filter& filter) {
     std::string ipAddressString;
     std::cout << "Insert IP address to filter: ";
     std::cin >> ipAddressString;
-    //routingTable->matchWithAddress(ipAddressString, routingTableVector);
+    filter.filterAndAppend(loadedRT.begin(), loadedRT.end(), [&](const RoutingTableRow& row) {
+        return matchWithAddress(row, ipAddressString);
+    }, filteredRoutingTableVector);
 }
 
 int main() {
@@ -107,7 +109,7 @@ int main() {
         std::string filename;
         switch (option) {
             case 0:
-                //filterByAddress(routingTable, routingTableVector);
+                filterByAddress(routingTable, filteredRoutingTableVector, loadedRoutingTable, filter);
                 filterByLifetime(routingTable, filteredRoutingTableVector, loadedRoutingTable, filter);
                 if (autoPrintAndSavePrompt) {
                     routingTable->print(filteredRoutingTableVector);
@@ -116,7 +118,7 @@ int main() {
                 std::cout << "------------------------------------------\nFound " << filteredRoutingTableVector.size() << " values." << std::endl;
                 break;
             case 1:
-                filterByAddress(routingTable, filteredRoutingTableVector);
+                filterByAddress(routingTable, filteredRoutingTableVector, loadedRoutingTable, filter);
                 if (autoPrintAndSavePrompt) {
                     routingTable->print(filteredRoutingTableVector);
                     savingPrompt(routingTable, filteredRoutingTableVector, filename);

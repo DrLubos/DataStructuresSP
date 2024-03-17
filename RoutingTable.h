@@ -45,7 +45,15 @@ auto matchLifetime = [](const RoutingTableRow& row, unsigned int startTime, unsi
 };
 
 auto matchWithAddress = [](const RoutingTableRow& row, const std::string& addressToCompare) {
-    return false;
+    int N = row.prefix;
+    std::bitset<32> ipAddress = row.ipAddress;
+    std::bitset<32> ipToCompare = RoutingTableOperations().processIPAddress(addressToCompare, nullptr);
+    for (int i = 0; i < N; i++) {
+        if (ipAddress[i] != ipToCompare[i]) {
+            return false;
+        }
+    }    
+    return true;
 };
 
 class Filter {
@@ -53,13 +61,13 @@ public:
     Filter() {}
     template<typename Iterator>
     void filterAndAppend(Iterator begin, Iterator end, std::function<bool(const RoutingTableRow&)> pred, std::vector<RoutingTableRow>& output) {
-        std::cout<< "Filtering" << std::endl;
+        std::cout<< "Filtering..." << std::endl;
         int i = 0;
         for (auto it = begin; it != end; ++it) {
             if (pred(*it)) {
                 output.push_back(*it);
             }
-            std::cout << i++ << std::endl;
+            //std::cout << i++ << std::endl;
         }
     }
 };
