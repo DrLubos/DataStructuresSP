@@ -37,7 +37,6 @@ public:
 };
 
 auto matchLifetime = [](const RoutingTableRow& row, unsigned int startTime, unsigned int endTime) {
-    //std::cout << "Lambda function called" << std::endl;
     if (row.lifetime >= startTime && row.lifetime <= endTime) {
         return true;
     }
@@ -59,15 +58,13 @@ auto matchWithAddress = [](const RoutingTableRow& row, const std::string& addres
 class Filter {
 public:
     Filter() {}
-    template<typename Iterator>
-    void filterAndAppend(Iterator begin, Iterator end, std::function<bool(const RoutingTableRow&)> pred, std::vector<RoutingTableRow>& output) {
-        std::cout<< "Filtering..." << std::endl;
-        int i = 0;
+    template<typename P, typename Iterator>
+    void filterAndAppend(Iterator begin, Iterator end, std::function<bool(const P&)> pred, std::vector<P>& output) {
+        std::vector<P*> filtered;
         for (auto it = begin; it != end; ++it) {
             if (pred(*it)) {
                 output.push_back(*it);
             }
-            //std::cout << i++ << std::endl;
         }
     }
 };

@@ -36,45 +36,6 @@ void savingPrompt(RoutingTableOperations* routingTable, std::vector<RoutingTable
     }
 }
 
-void filterByLifetime(RoutingTableOperations* routingTable, std::vector<RoutingTableRow>& filteredRoutingTableVector, std::vector<RoutingTableRow>& loadedRT, Filter& filter) {
-    std::string start;
-    std::string end;
-    std::cout << "Insert minimum possible starting lifetime (s) or (XwXdXhXmXs) or (HH:MM:SS): ";
-    std::cin >> start;
-    unsigned int startLifetime = isStringNumeric(start) ? std::stoul(start) : routingTable->processLifetime(start);
-    std::cout << "Insert maximum possible ending lifetime (s) or (XwXdXhXmXs) or (HH:MM:SS) or (-1) to check without maximum possible ending: ";
-    std::cin >> end;
-    unsigned int endLifetime;
-    if (end[0] == '-' && end[1] == '1') {
-        endLifetime = UINT_MAX;
-    } else if (isStringNumeric(end)) {
-        endLifetime = std::stoul(end);
-    } else {
-        endLifetime = routingTable->processLifetime(end);
-    }
-    if (startLifetime > endLifetime) {
-        std::swap(startLifetime, endLifetime);
-    }
-    std::cout << "Selected lifetime: " << startLifetime << "(s) - " << endLifetime << "(s)" << std::endl;
-    filter.filterAndAppend(loadedRT.begin(), loadedRT.end(), [&](const RoutingTableRow& row) {
-        return matchLifetime(row, startLifetime, endLifetime);
-    }, filteredRoutingTableVector);
-}
-
-void filterByAddress(RoutingTableOperations* routingTable, std::vector<RoutingTableRow>& filteredRoutingTableVector, std::vector<RoutingTableRow>& loadedRT, Filter& filter) {
-    std::string ipAddressString;
-    std::cout << "Insert IP address to filter: ";
-    std::cin >> ipAddressString;
-    try {
-    filter.filterAndAppend(loadedRT.begin(), loadedRT.end(), [&](const RoutingTableRow& row) {
-        return matchWithAddress(row, ipAddressString);
-    }, filteredRoutingTableVector);
-
-    } catch (const std::exception& e) {
-        std::cerr << e.what() << std::endl;
-    }
-}
-
 void chooseLifetime(unsigned int& startingLifetime, unsigned int& endingLifetime, RoutingTableOperations* routingTable) {
     std::string start;
     std::string end;
@@ -146,7 +107,7 @@ int main() {
                 chooseAddress(ipAddressToCompare);
                 chooseLifetime(startingLifetime, endingLifetime, routingTable);
                 try {
-                    filter.filterAndAppend(loadedRoutingTable.begin(), loadedRoutingTable.end(), [startingLifetime, endingLifetime, ipAddressToCompare](const RoutingTableRow& row) {
+                    filter.filterAndAppend<RoutingTableRow>(loadedRoutingTable.begin(), loadedRoutingTable.end(), [startingLifetime, endingLifetime, ipAddressToCompare](const RoutingTableRow& row) {
                         return matchLifetime(row, startingLifetime, endingLifetime) && matchWithAddress(row, ipAddressToCompare);
                     }, filteredRoutingTableVector);
                     if (autoPrintAndSavePrompt) {
@@ -163,7 +124,7 @@ int main() {
             case 1:
                 chooseAddress(ipAddressToCompare);
                 try {
-                    filter.filterAndAppend(loadedRoutingTable.begin(), loadedRoutingTable.end(), [&](const RoutingTableRow& row) {
+                    filter.filterAndAppend<RoutingTableRow>(loadedRoutingTable.begin(), loadedRoutingTable.end(), [&](const RoutingTableRow& row) {
                         return matchWithAddress(row, ipAddressToCompare);
                     }, filteredRoutingTableVector);
                     if (autoPrintAndSavePrompt) {
@@ -180,7 +141,7 @@ int main() {
             case 2:
                 chooseLifetime(startingLifetime, endingLifetime, routingTable);
                 try {
-                    filter.filterAndAppend(loadedRoutingTable.begin(), loadedRoutingTable.end(), [&](const RoutingTableRow& row) {
+                    filter.filterAndAppend<RoutingTableRow>(loadedRoutingTable.begin(), loadedRoutingTable.end(), [&](const RoutingTableRow& row) {
                         return matchLifetime(row, startingLifetime, endingLifetime);
                     }, filteredRoutingTableVector);
                     if (autoPrintAndSavePrompt) {
