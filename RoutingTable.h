@@ -26,14 +26,18 @@ struct RoutingTableRow {
 
 class RoutingTableOperations {
 private:
-    bool isStringIPMaskFormat(const std::string& str);
+    static bool isStringIPMaskFormat(const std::string& str);
+    static void printRow(const RoutingTableRow &row);
+    static void saveRowToCSV(std::ofstream &file, const RoutingTableRow &row);
 public:
-    std::bitset<32> processIPAddress(const std::string& ipAddressString, unsigned char* prefix);
-    unsigned int processLifetime(const std::string& lifetimeString);
-    std::string convertLifetime(unsigned int lifetime);
-    void loadFromCSV(const std::string& filename, std::vector<RoutingTableRow>& saveToVector);
-    void print(const std::vector<RoutingTableRow>& vectorToPrint);
-    void saveToCSV(const std::string& filename, const std::vector<RoutingTableRow>& vectorToPrint);
+    static std::bitset<32> processIPAddress(const std::string& ipAddressString, unsigned char* prefix);
+    static unsigned int processLifetime(const std::string& lifetimeString);
+    static std::string convertLifetime(unsigned int lifetime);
+    static void loadFromCSV(const std::string& filename, std::vector<RoutingTableRow>& saveToVector);
+    static void print(const std::vector<RoutingTableRow>& vectorToPrint);
+    static void print(const std::vector<RoutingTableRow*>& vectorToPrint);
+    static void saveToCSV(const std::string &filename, const std::vector<RoutingTableRow> &vectorToPrint);
+    static void saveToCSV(const std::string& filename, const std::vector<RoutingTableRow*>& vectorToPrint);
 };
 
 auto matchLifetime = [](const RoutingTableRow& row, unsigned int startTime, unsigned int endTime) {
@@ -43,15 +47,13 @@ auto matchLifetime = [](const RoutingTableRow& row, unsigned int startTime, unsi
     return false;
 };
 
-auto matchWithAddress = [](const RoutingTableRow& row, const std::string& addressToCompare) {
-    int N = row.prefix;
+auto matchWithAddress = [](const RoutingTableRow& row, const std::bitset<32>& addressToCompare) {
     std::bitset<32> ipAddress = row.ipAddress;
-    std::bitset<32> ipToCompare = RoutingTableOperations().processIPAddress(addressToCompare, nullptr);
-    for (int i = 0; i < N; i++) {
-        if (ipAddress[i] != ipToCompare[i]) {
+    for (int i = 0; i < row.prefix; ++i) {
+        if (ipAddress[i] != addressToCompare[i]) {
             return false;
         }
-    }    
+    }
     return true;
 };
 
@@ -59,13 +61,14 @@ class Filter {
 public:
     Filter() {}
     template<typename P, typename Iterator>
-    void filterAndAppend(Iterator begin, Iterator end, std::function<bool(const P&)> pred, std::vector<P>& output) {
+    std::vector<P*> filterEntries(Iterator begin, Iterator end, std::function<bool(const P&)> pred) {
         std::vector<P*> filtered;
         for (auto it = begin; it != end; ++it) {
             if (pred(*it)) {
-                output.push_back(*it);
+                filtered.push_back(&(*it));
             }
         }
+        return filtered;
     }
 };
 
@@ -87,7 +90,7 @@ void RoutingTableOperations::loadFromCSV(const std::string& filename, std::vecto
     unsigned int rowNumber = 1;
     std::getline(file, line);
     while (std::getline(file, line)) {
-        rowNumber++;
+        ++rowNumber;
         std::istringstream ss(line);
         std::vector<std::string> cells;
         std::string cell;
@@ -98,18 +101,18 @@ void RoutingTableOperations::loadFromCSV(const std::string& filename, std::vecto
             RoutingTableRow entry;
             unsigned char prefix = 0;
             try {
-                entry.ipAddress = this->processIPAddress(cells[1], &entry.prefix);
+                entry.ipAddress = processIPAddress(cells[1], &entry.prefix);
             } catch (const std::exception& e) {
                 std::cerr << "Error: " << e.what() << " Check line " << rowNumber << std::endl;
                 continue;
             }
             if (cells[3][0] == 'v' && cells[3][1] == 'i' && cells[3][2] == 'a') {
-                entry.destinationIP = cells[3][3] == ' ' ? this->processIPAddress(cells[3].substr(4), nullptr) : this->processIPAddress(cells[3].substr(3), nullptr);
+                entry.destinationIP = cells[3][3] == ' ' ? processIPAddress(cells[3].substr(4), nullptr) : processIPAddress(cells[3].substr(3), nullptr);
             } else {
                 std::cout << "Supported only next-hop ip address, check line " << rowNumber << std::endl;
             }
             if (cells.size() > 4 && (std::isdigit(cells[4][0]) || std::isalpha(cells[4][0]))) {
-                entry.lifetime = this->processLifetime(cells[4]);
+                entry.lifetime = processLifetime(cells[4]);
             } else {
                 entry.lifetime = UINT_MAX;
             }
@@ -121,27 +124,37 @@ void RoutingTableOperations::loadFromCSV(const std::string& filename, std::vecto
 }
 
 void RoutingTableOperations::print(const std::vector<RoutingTableRow>& vectorToPrint) {
-    std::for_each(vectorToPrint.begin(), vectorToPrint.end(), [=](const RoutingTableRow& row) {
-        std::cout << "==========================================" << std::endl;
-        std::cout << "IP Address: ";
-        for (size_t i = 0; i < row.ipAddress.size(); i += 8) {
-            std::cout << std::bitset<8>(row.ipAddress.to_ulong() >> i).to_ulong();
-            if (i + 8 < row.ipAddress.size()) {
-                std::cout << ".";
-            }
+    for (const RoutingTableRow& row : vectorToPrint) {
+        printRow(row);
+    }
+}
+
+void RoutingTableOperations::print(const std::vector<RoutingTableRow*>& vectorToPrint) {
+    for(const RoutingTableRow* row : vectorToPrint) {
+        printRow(*row);
+    }
+}
+
+void RoutingTableOperations::printRow(const RoutingTableRow& row) {
+    std::cout << "==========================================" << std::endl;
+    std::cout << "IP Address: ";
+    for (size_t i = 0; i < row.ipAddress.size(); i += 8) {
+        std::cout << std::bitset<8>(row.ipAddress.to_ulong() >> i).to_ulong();
+        if (i + 8 < row.ipAddress.size()) {
+            std::cout << ".";
         }
-        std::cout << "/" << int(row.prefix) << std::endl;
-        std::cout << "Next Hop: ";
-        for (size_t i = 0; i < row.destinationIP.size(); i += 8) {
-            std::cout << std::bitset<8>(row.destinationIP.to_ulong() >> i).to_ulong();
-            if (i + 8 < row.destinationIP.size()) {
-                std::cout << ".";
-            }
+    }
+    std::cout << "/" << int(row.prefix) << std::endl;
+    std::cout << "Next Hop: ";
+    for (size_t i = 0; i < row.destinationIP.size(); i += 8) {
+        std::cout << std::bitset<8>(row.destinationIP.to_ulong() >> i).to_ulong();
+        if (i + 8 < row.destinationIP.size()) {
+            std::cout << ".";
         }
-        std::cout << std::endl;
-        std::cout << "Lifetime: ";
-        row.lifetime > 59 ? std::cout << row.lifetime << "(s) " << this->convertLifetime(row.lifetime) << std::endl : std::cout << row.lifetime << "s" << std::endl;
-    });
+    }
+    std::cout << std::endl;
+    std::cout << "Lifetime: ";
+    row.lifetime > 59 ? std::cout << row.lifetime << "(s) " << convertLifetime(row.lifetime) << std::endl : std::cout << row.lifetime << "s" << std::endl;
 }
 
 unsigned int RoutingTableOperations::processLifetime(const std::string& lifetimeString) {
@@ -154,19 +167,19 @@ unsigned int RoutingTableOperations::processLifetime(const std::string& lifetime
         switch (lifetimeString[0]) {
             case 'w':
                 lifetime.push_back(60 * 60 * 24 * 7);
-                i++;
+                ++i;
                 break;
             case 'd':
                 lifetime.push_back(60 * 60 * 24);
-                i++;
+                ++i;
                 break;
             case 'h':
                 lifetime.push_back(60 * 60);
-                i++;
+                ++i;
                 break;
             case 'm':
                 lifetime.push_back(60);
-                i++;
+                ++i;
                 break;
             case 's':
                 return 1;
@@ -299,26 +312,45 @@ void RoutingTableOperations::saveToCSV(const std::string& filename, const std::v
         file << "IP/Prefix;Next-Hop;Lifetime\n";
         for (size_t i = 0; i < vectorToPrint.size(); ++i) {
             const auto& row = vectorToPrint[i];
-            std::string ipAddressString = row.ipAddress.to_string();
-            std::string destinationIPString = row.destinationIP.to_string();
-            std::stringstream ipAddressStream, destinationIPStream;
-            for (int i = 24; i >= 0; i -= 8) {
-                std::bitset<8> ipAddressOctet(ipAddressString.substr(i, 8));
-                std::bitset<8> destinationIPOctet(destinationIPString.substr(i, 8));
-                ipAddressStream << ipAddressOctet.to_ulong() << ".";
-                destinationIPStream << destinationIPOctet.to_ulong() << ".";
-            }
-            std::string ipAddressDec = ipAddressStream.str();
-            std::string destinationIPDec = destinationIPStream.str();
-            ipAddressDec.pop_back();
-            destinationIPDec.pop_back();
-            file << ipAddressDec << "/" << int(row.prefix) << ";via " << destinationIPDec << ";" << this->convertLifetime(row.lifetime);
+            saveRowToCSV(file, row);
             if (i < vectorToPrint.size() - 1) {
                 file << "\n";
             }
         }
-    }    
+    }
     file.close();
+}
+
+void RoutingTableOperations::saveToCSV(const std::string& filename, const std::vector<RoutingTableRow*>& vectorToPrint) {
+    std::ofstream file(filename);
+    if (file.is_open()) {
+        file << "IP/Prefix;Next-Hop;Lifetime\n";
+        for (size_t i = 0; i < vectorToPrint.size(); ++i) {
+            const auto& row = *vectorToPrint[i];
+            saveRowToCSV(file, row);
+            if (i < vectorToPrint.size() - 1) {
+                file << "\n";
+            }
+        }
+    }
+    file.close();
+}
+
+void RoutingTableOperations::saveRowToCSV(std::ofstream& file, const RoutingTableRow& row) {
+    std::string ipAddressString = row.ipAddress.to_string();
+    std::string destinationIPString = row.destinationIP.to_string();
+    std::stringstream ipAddressStream, destinationIPStream;
+    for (int i = 24; i >= 0; i -= 8) {
+        std::bitset<8> ipAddressOctet(ipAddressString.substr(i, 8));
+        std::bitset<8> destinationIPOctet(destinationIPString.substr(i, 8));
+        ipAddressStream << ipAddressOctet.to_ulong() << ".";
+        destinationIPStream << destinationIPOctet.to_ulong() << ".";
+    }
+    std::string ipAddressDec = ipAddressStream.str();
+    std::string destinationIPDec = destinationIPStream.str();
+    ipAddressDec.pop_back();
+    destinationIPDec.pop_back();
+    file << ipAddressDec << "/" << int(row.prefix) << ";via " << destinationIPDec << ";" << convertLifetime(row.lifetime);
 }
 
 std::bitset<32> RoutingTableOperations::processIPAddress(const std::string& ipAddressString, unsigned char* prefix) {
@@ -327,7 +359,7 @@ std::bitset<32> RoutingTableOperations::processIPAddress(const std::string& ipAd
     std::string octetString;
     int index = 3;
     while (std::getline(iss, octetString, '.')) {
-        if (!this->isStringIPMaskFormat(octetString)) {
+        if (!isStringIPMaskFormat(octetString)) {
             std::cout << octetString << std::endl;
             throw std::runtime_error("Error: Invalid IP address format.\n");
         }
@@ -335,12 +367,12 @@ std::bitset<32> RoutingTableOperations::processIPAddress(const std::string& ipAd
         if (octet >= 0 && octet < 256) {
             ipAddressBits |= (std::bitset<32>(octet) << (24 - index * 8));
         }
-        index--;
+        --index;
     }
     size_t startingPrefixIndex = ipAddressString.find('/');
     if (startingPrefixIndex != std::string::npos) {
         std::string prefixString = ipAddressString.substr(startingPrefixIndex + 1);
-        if (!this->isStringIPMaskFormat(prefixString)) {
+        if (!isStringIPMaskFormat(prefixString)) {
             throw std::runtime_error("Error: Invalid prefix format.\n");
         }
         int prefixValue = std::stoi(prefixString);
