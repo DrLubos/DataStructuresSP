@@ -26,50 +26,18 @@ struct RoutingTableRow {
 
 class RoutingTableOperations {
 private:
-    static bool isStringIPMaskFormat(const std::string& str);
-    static void printRow(const RoutingTableRow &row);
-    static void saveRowToCSV(std::ofstream &file, const RoutingTableRow &row);
+    bool isStringIPMaskFormat(const std::string& str);
+    void printRow(const RoutingTableRow &row);
+    void saveRowToCSV(std::ofstream &file, const RoutingTableRow &row);
 public:
-    static std::bitset<32> processIPAddress(const std::string& ipAddressString, unsigned char* prefix);
-    static unsigned int processLifetime(const std::string& lifetimeString);
-    static std::string convertLifetime(unsigned int lifetime);
-    static void loadFromCSV(const std::string& filename, std::vector<RoutingTableRow>& saveToVector);
-    static void print(const std::vector<RoutingTableRow>& vectorToPrint);
-    static void print(const std::vector<RoutingTableRow*>& vectorToPrint);
-    static void saveToCSV(const std::string &filename, const std::vector<RoutingTableRow> &vectorToPrint);
-    static void saveToCSV(const std::string& filename, const std::vector<RoutingTableRow*>& vectorToPrint);
-};
-
-auto matchLifetime = [](const RoutingTableRow& row, unsigned int startTime, unsigned int endTime) {
-    if (row.lifetime >= startTime && row.lifetime <= endTime) {
-        return true;
-    }
-    return false;
-};
-
-auto matchWithAddress = [](const RoutingTableRow& row, const std::bitset<32>& addressToCompare) {
-    std::bitset<32> ipAddress = row.ipAddress;
-    for (int i = 0; i < row.prefix; ++i) {
-        if (ipAddress[i] != addressToCompare[i]) {
-            return false;
-        }
-    }
-    return true;
-};
-
-class Filter {
-public:
-    Filter() {}
-    template<typename P, typename Iterator>
-    std::vector<P*> filterEntries(Iterator begin, Iterator end, std::function<bool(const P&)> pred) {
-        std::vector<P*> filtered;
-        for (auto it = begin; it != end; ++it) {
-            if (pred(*it)) {
-                filtered.push_back(&(*it));
-            }
-        }
-        return filtered;
-    }
+    std::bitset<32> processIPAddress(const std::string& ipAddressString, unsigned char* prefix);
+    unsigned int processLifetime(const std::string& lifetimeString);
+    std::string convertLifetime(unsigned int lifetime);
+    void loadFromCSV(const std::string& filename, std::vector<RoutingTableRow>& saveToVector);
+    void print(const std::vector<RoutingTableRow>& vectorToPrint);
+    void print(const std::vector<RoutingTableRow*>& vectorToPrint);
+    void saveToCSV(const std::string &filename, const std::vector<RoutingTableRow> &vectorToPrint);
+    void saveToCSV(const std::string& filename, const std::vector<RoutingTableRow*>& vectorToPrint);
 };
 
 bool RoutingTableOperations::isStringIPMaskFormat(const std::string& str) {

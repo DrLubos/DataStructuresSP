@@ -1,4 +1,5 @@
 #include "RoutingTable.h"
+#include "Filter.h"
 
 void selectNameOfCSVFile(std::string& defaultName) {
     std::cin.ignore();
@@ -19,7 +20,7 @@ void selectNameOfCSVFile(std::string& defaultName) {
 }
 
 template<typename P>
-void savingPrompt(std::vector<P>& routingTableVector, std::string& filename) {
+void savingPrompt(std::vector<P>& routingTableVector, std::string& filename, RoutingTableOperations& routingTableOperations) {
     if (routingTableVector.size() > 0) {
         char choice;
         std::cout << "Do you want to save the filtered table to a CSV file? (y/n):";
@@ -28,7 +29,7 @@ void savingPrompt(std::vector<P>& routingTableVector, std::string& filename) {
             filename = "RT_Filtered.csv";
             selectNameOfCSVFile(filename);
             if (filename != "") {
-                RoutingTableOperations::saveToCSV(filename, routingTableVector);
+                routingTableOperations.saveToCSV(filename, routingTableVector);
                 std::cout << "Filtered routing table saved to " << filename << std::endl;
             } else {
                 std::cout << "Saving cancelled!" << std::endl;
@@ -37,65 +38,21 @@ void savingPrompt(std::vector<P>& routingTableVector, std::string& filename) {
     }
 }
 
-void chooseLifetime(unsigned int& startingLifetime, unsigned int& endingLifetime) {
-    std::string start;
-    std::string end;
-    std::cout << "Insert minimum possible starting lifetime (s) or (XwXdXhXmXs) or (HH:MM:SS): ";
-    std::cin >> start;
-    startingLifetime = isStringNumeric(start) ? std::stoul(start) : RoutingTableOperations::processLifetime(start);
-    std::cout << "Insert maximum possible ending lifetime (s) or (XwXdXhXmXs) or (HH:MM:SS) or (-1) to check without maximum possible ending: ";
-    std::cin >> end;
-    if (end[0] == '-' && end[1] == '1') {
-        endingLifetime = UINT_MAX;
-    } else if (isStringNumeric(end)) {
-        endingLifetime = std::stoul(end);
-    } else {
-        endingLifetime = RoutingTableOperations::processLifetime(end);
-    }
-    if (startingLifetime > endingLifetime) {
-        std::swap(startingLifetime, endingLifetime);
-    }
-    std::cout << "Selected lifetime: " << startingLifetime << "(s) - " << endingLifetime << "(s)" << std::endl;
-}
-
-void chooseAddress(std::bitset<32>& ipAddressToCompare) {
-    bool validIpAddress = false;
-    while (!validIpAddress) {
-        std::cout << "Insert IP address to filter: ";
-        std::string ipAddressString;
-        std::cin >> ipAddressString;
-        try {
-            ipAddressToCompare = RoutingTableOperations::processIPAddress(ipAddressString, nullptr);
-            validIpAddress = true;
-        } catch (const std::exception& e) {
-            std::cerr << e.what() << std::endl;
-        }
-    }
-}
-
-int main() {
-    //RoutingTableOperations routingTableOperations;
-    std::vector<RoutingTableRow> loadedRoutingTable;
-    std::vector<RoutingTableRow*> filtering;
-    try {
-        RoutingTableOperations::loadFromCSV("RT.csv", loadedRoutingTable);
-    } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
-        return 1;
-    }
-    std::cout << "Routing table loaded successfully!" << std::endl;
+void mainLoop(RoutingTableOperations& routingTableOperations, std::vector<RoutingTableRow>& loadedRoutingTable) {
     Filter filter;
+    std::vector<RoutingTableRow*> filtering;
     std::string optionString;
     int option;
     bool autaSavePrompt = true;
     do {
-        std::cout << std::endl << "Options:\n\t[0] Filter by mathing IP address and lifetime" << std::endl;
+        std::cout << std::endl << "Options:\n\t[0] Filter by matching IP address and lifetime" << std::endl;
         std::cout << "\t[1] Filter by matching IP address" << std::endl;
         std::cout << "\t[2] Filter by matching lifetime" << std::endl;
         std::cout << "\t[3] Save whole table to CSV" << std::endl;
         std::cout << "\t[4] Print whole routing table" << std::endl;
         std::cout << "\t[5] Save filtered routing table to CSV" << std::endl;
-        autaSavePrompt ? std::cout << "\t[6] Disable auto save prompt" << std::endl : std::cout << "\t[7] Enable auto save prompt" << std::endl;
+        std::cout << "\t[6] Print filtered routing table" << std::endl;
+        autaSavePrompt ? std::cout << "\t[7] Disable auto save prompt" << std::endl : std::cout << "\t[7] Enable auto save prompt" << std::endl;
         std::cout << "\t[9] To exit program" << std::endl;
         std::cout << "Your option: ";
         std::cin >> optionString;
@@ -109,23 +66,22 @@ int main() {
             option = -1;
         }
         std::string filename;
-        //option = 3;
         switch (option) {
             case 0:
-                chooseAddress(ipAddressToCompare);
-                chooseLifetime(startingLifetime, endingLifetime);
+                filter.chooseAddress(ipAddressToCompare, routingTableOperations);
+                filter.chooseLifetime(startingLifetime, endingLifetime, routingTableOperations);
                 filtering = filter.filterEntries<RoutingTableRow>(loadedRoutingTable.begin(), loadedRoutingTable.end(), [&](const RoutingTableRow& row) {
                     return matchLifetime(row, startingLifetime, endingLifetime) && matchWithAddress(row, ipAddressToCompare);
                 });
                 break;
             case 1:
-                chooseAddress(ipAddressToCompare);
+                filter.chooseAddress(ipAddressToCompare, routingTableOperations);
                 filtering = filter.filterEntries<RoutingTableRow>(loadedRoutingTable.begin(), loadedRoutingTable.end(), [&](const RoutingTableRow& row) {
                     return matchWithAddress(row, ipAddressToCompare);
                 });
                 break;
             case 2:
-                chooseLifetime(startingLifetime, endingLifetime);
+                filter.chooseLifetime(startingLifetime, endingLifetime, routingTableOperations);
                 filtering = filter.filterEntries<RoutingTableRow>(loadedRoutingTable.begin(), loadedRoutingTable.end(), [&](const RoutingTableRow& row) {
                     return matchLifetime(row, startingLifetime, endingLifetime);
                 });
@@ -136,39 +92,55 @@ int main() {
                 if (filename == "") {
                     std::cout << "Save cancelled!" << std::endl;
                 } else {
-                    RoutingTableOperations::saveToCSV(filename, loadedRoutingTable);
+                    routingTableOperations.saveToCSV(filename, loadedRoutingTable);
                     std::cout << "Loaded routing table saved to " << filename << std::endl;
                 }
                 break;
             case 4:
-                RoutingTableOperations::print(loadedRoutingTable);
-                std::cout << "------------------------------------------\nPrinted " << loadedRoutingTable.size() << " rows." << std::endl;
+                routingTableOperations.print(loadedRoutingTable);
+                std::cout << "------------------------------------------\nPrinted " << loadedRoutingTable.size() << " values." << std::endl;
                 break;
             case 5:
                 if (filtering.size() > 0) {
-                    savingPrompt(filtering, filename);
+                    savingPrompt(filtering, filename, routingTableOperations);
                 } else {
                     std::cout << "No filtered routing table values to save!" << std::endl;
                 }
                 break;
             case 6:
+                routingTableOperations.print(filtering);
+                std::cout << "------------------------------------------\nPrinted " << filtering.size() << " values." << std::endl;
+            case 7:
                 autaSavePrompt = !autaSavePrompt;
                 autaSavePrompt ? std::cout << "Auto printing filtered table enabled!" << std::endl : std::cout << "Auto printing filtered table disabled!" << std::endl;
                 break;
             case 9:
                 std::cout << "Exiting..." << std::endl;
-                return 0;
+                return;
             default:
                 std::cout << "Invalid option!" << std::endl;
         }
         if (option > -1 && option < 3) {
-            RoutingTableOperations::print(filtering);
+            routingTableOperations.print(filtering);
             std::cout << "------------------------------------------\nFound " << filtering.size() << " values." << std::endl;
             if (autaSavePrompt) {
-                savingPrompt(filtering, filename);
+                savingPrompt(filtering, filename, routingTableOperations);
             }
         }
         option = -1;
     } while (true);
+}
+
+int main() {
+    RoutingTableOperations routingTableOperations;
+    std::vector<RoutingTableRow> loadedRoutingTable;
+    try {
+        routingTableOperations.loadFromCSV("RT.csv", loadedRoutingTable);
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        return 1;
+    }
+    std::cout << "Routing table loaded successfully!" << std::endl;
+    mainLoop(routingTableOperations, loadedRoutingTable);
     return 0;
 }
