@@ -10,7 +10,7 @@ auto matchLifetime = [](const RoutingTableRow& row, unsigned int startTime, unsi
 auto matchWithAddress = [](const RoutingTableRow& row, const std::bitset<32>& addressToCompare) {
     std::bitset<32> ipAddress = row.ipAddress;
     for (int i = 0; i < row.prefix; ++i) {
-        if (ipAddress[i] != addressToCompare[i]) {
+        if (ipAddress[ipAddress.size() - i - 1] != addressToCompare[addressToCompare.size() - i - 1]) {
             return false;
         }
     }

@@ -106,17 +106,17 @@ void RoutingTableOperations::print(const std::vector<RoutingTableRow*>& vectorTo
 void RoutingTableOperations::printRow(const RoutingTableRow& row) {
     std::cout << "==========================================" << std::endl;
     std::cout << "IP Address: ";
-    for (size_t i = 0; i < row.ipAddress.size(); i += 8) {
+    for (int i = row.ipAddress.size() - 8; i >= 0; i -= 8) {
         std::cout << std::bitset<8>(row.ipAddress.to_ulong() >> i).to_ulong();
-        if (i + 8 < row.ipAddress.size()) {
+        if (i > 0) {
             std::cout << ".";
         }
     }
     std::cout << "/" << int(row.prefix) << std::endl;
     std::cout << "Next Hop: ";
-    for (size_t i = 0; i < row.destinationIP.size(); i += 8) {
+    for (int i = row.destinationIP.size() - 8; i >= 0; i -= 8) {
         std::cout << std::bitset<8>(row.destinationIP.to_ulong() >> i).to_ulong();
-        if (i + 8 < row.destinationIP.size()) {
+        if (i > 0) {
             std::cout << ".";
         }
     }
@@ -308,17 +308,17 @@ void RoutingTableOperations::saveRowToCSV(std::ofstream& file, const RoutingTabl
     std::string ipAddressString = row.ipAddress.to_string();
     std::string destinationIPString = row.destinationIP.to_string();
     std::stringstream ipAddressStream, destinationIPStream;
-    for (int i = 24; i >= 0; i -= 8) {
+    for (int i = 0; i <= 24; i += 8) {
         std::bitset<8> ipAddressOctet(ipAddressString.substr(i, 8));
         std::bitset<8> destinationIPOctet(destinationIPString.substr(i, 8));
-        ipAddressStream << ipAddressOctet.to_ulong() << ".";
-        destinationIPStream << destinationIPOctet.to_ulong() << ".";
+        ipAddressStream << ipAddressOctet.to_ulong();
+        destinationIPStream << destinationIPOctet.to_ulong();
+        if (i < 24) {
+            ipAddressStream << ".";
+            destinationIPStream << ".";
+        }
     }
-    std::string ipAddressDec = ipAddressStream.str();
-    std::string destinationIPDec = destinationIPStream.str();
-    ipAddressDec.pop_back();
-    destinationIPDec.pop_back();
-    file << ipAddressDec << "/" << int(row.prefix) << ";via " << destinationIPDec << ";" << convertLifetime(row.lifetime);
+    file << ipAddressStream.str() << "/" << int(row.prefix) << ";via " << destinationIPStream.str() << ";" << convertLifetime(row.lifetime);
 }
 
 std::bitset<32> RoutingTableOperations::processIPAddress(const std::string& ipAddressString, unsigned char* prefix) {
@@ -333,7 +333,7 @@ std::bitset<32> RoutingTableOperations::processIPAddress(const std::string& ipAd
         }
         int octet = std::stoi(octetString);
         if (octet >= 0 && octet < 256) {
-            ipAddressBits |= (std::bitset<32>(octet) << (24 - index * 8));
+            ipAddressBits |= (std::bitset<32>(octet) << (index * 8));
         }
         --index;
     }
