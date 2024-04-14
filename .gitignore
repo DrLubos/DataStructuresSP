@@ -1,7 +1,7 @@
 *
 !*/
 !*.*
-
+build/
 *.csv
 .DS_Store
 

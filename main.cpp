@@ -1,5 +1,6 @@
 #include "RoutingTable.h"
 #include "Filter.h"
+#include "Hierarchy.h"
 
 void selectNameOfCSVFile(std::string& defaultName) {
     std::cin.ignore();
