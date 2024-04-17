@@ -33,7 +33,6 @@ public:
     static std::bitset<32> processIPAddress(const std::string& ipAddressString, unsigned char* prefix);
     static unsigned int processLifetime(const std::string& lifetimeString);
     static std::string convertLifetime(unsigned int lifetime);
-    static void loadFromCSV(const std::string& filename, std::vector<RoutingTableRow>& saveToVector);
     static void print(const std::vector<RoutingTableRow>& vectorToPrint);
     static void print(const std::vector<RoutingTableRow*>& vectorToPrint);
     static void saveToCSV(const std::string &filename, const std::vector<RoutingTableRow> &vectorToPrint);
@@ -89,7 +88,7 @@ unsigned int RoutingTableOperations::processLifetime(const std::string& lifetime
     bool hoursMuliply = true;
     bool minutesMuliply = true;
     size_t i = 0;
-    if (lifetimeString.size() > 0 && !std::isdigit(lifetimeString[0])) {
+    if (!lifetimeString.empty() && !std::isdigit(lifetimeString[0])) {
         switch (lifetimeString[0]) {
             case 'w':
                 lifetime.push_back(60 * 60 * 24 * 7);

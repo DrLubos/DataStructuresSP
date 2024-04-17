@@ -19,11 +19,10 @@ auto matchWithAddress = [](const RoutingTableRow& row, const std::bitset<32>& ad
 
 class Filter {
     public:
-        Filter() {}
         template<typename P, typename Iterator>
         std::vector<P*> filterEntries(Iterator begin, Iterator end, std::function<bool(const P&)> pred);
-        void chooseLifetime(unsigned int& startingLifetime, unsigned int& endingLifetime, RoutingTableOperations& routingTableOperations);
-        void chooseAddress(std::bitset<32>& ipAddressToCompare, RoutingTableOperations& routingTableOperations);
+        static void chooseLifetime(unsigned int& startingLifetime, unsigned int& endingLifetime);
+        static void chooseAddress(std::bitset<32>& ipAddressToCompare);
 };
 
 template<typename P, typename Iterator>
@@ -37,12 +36,12 @@ std::vector<P*> Filter::filterEntries(Iterator begin, Iterator end, std::functio
     return filtered;
 }
 
-void Filter::chooseLifetime(unsigned int& startingLifetime, unsigned int& endingLifetime, RoutingTableOperations& routingTableOperations) {
+void Filter::chooseLifetime(unsigned int& startingLifetime, unsigned int& endingLifetime) {
     std::string start;
     std::string end;
     std::cout << "Insert minimum possible starting lifetime (s) or (XwXdXhXmXs) or (HH:MM:SS): ";
     std::cin >> start;
-    startingLifetime = isStringNumeric(start) ? std::stoul(start) : routingTableOperations.processLifetime(start);
+    startingLifetime = isStringNumeric(start) ? std::stoul(start) : RoutingTableOperations::processLifetime(start);
     std::cout << "Insert maximum possible ending lifetime (s) or (XwXdXhXmXs) or (HH:MM:SS) or (-1) to check without maximum possible ending: ";
     std::cin >> end;
     if (end[0] == '-' && end[1] == '1') {
@@ -50,7 +49,7 @@ void Filter::chooseLifetime(unsigned int& startingLifetime, unsigned int& ending
     } else if (isStringNumeric(end)) {
         endingLifetime = std::stoul(end);
     } else {
-        endingLifetime = routingTableOperations.processLifetime(end);
+        endingLifetime = RoutingTableOperations::processLifetime(end);
     }
     if (startingLifetime > endingLifetime) {
         std::swap(startingLifetime, endingLifetime);
@@ -58,14 +57,14 @@ void Filter::chooseLifetime(unsigned int& startingLifetime, unsigned int& ending
     std::cout << "Selected lifetime: " << startingLifetime << "(s) - " << endingLifetime << "(s)" << std::endl;
 }
 
-void Filter::chooseAddress(std::bitset<32>& ipAddressToCompare, RoutingTableOperations& routingTableOperations) {
+void Filter::chooseAddress(std::bitset<32>& ipAddressToCompare) {
     bool validIpAddress = false;
     while (!validIpAddress) {
         std::cout << "Insert IP address to filter: ";
         std::string ipAddressString;
         std::cin >> ipAddressString;
         try {
-            ipAddressToCompare = routingTableOperations.processIPAddress(ipAddressString, nullptr);
+            ipAddressToCompare = RoutingTableOperations::processIPAddress(ipAddressString, nullptr);
             validIpAddress = true;
         } catch (const std::exception& e) {
             std::cerr << e.what() << std::endl;

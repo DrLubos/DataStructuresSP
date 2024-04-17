@@ -21,7 +21,7 @@ void selectNameOfCSVFile(std::string& defaultName) {
 }
 
 template<typename P>
-void savingPrompt(std::vector<P>& routingTableVector, std::string& filename, RoutingTableOperations& routingTableOperations) {
+void savingPrompt(std::vector<P>& routingTableVector, std::string& filename) {
     if (routingTableVector.size() > 0) {
         char choice;
         std::cout << "Do you want to save the filtered table to a CSV file? (y/n):";
@@ -30,7 +30,7 @@ void savingPrompt(std::vector<P>& routingTableVector, std::string& filename, Rou
             filename = "RT_Filtered.csv";
             selectNameOfCSVFile(filename);
             if (filename != "") {
-                routingTableOperations.saveToCSV(filename, routingTableVector);
+                RoutingTableOperations::saveToCSV(filename, routingTableVector);
                 std::cout << "Filtered routing table saved to " << filename << std::endl;
             }
             else {
@@ -40,7 +40,7 @@ void savingPrompt(std::vector<P>& routingTableVector, std::string& filename, Rou
     }
 }
 
-void mainLoop(RoutingTableOperations& routingTableOperations, std::vector<RoutingTableRow>& loadedRoutingTable) {
+void mainLoop(std::vector<RoutingTableRow>& loadedRoutingTable) {
     Filter filter;
     std::vector<RoutingTableRow*> filtering;
     std::string optionString;
@@ -71,20 +71,20 @@ void mainLoop(RoutingTableOperations& routingTableOperations, std::vector<Routin
         std::string filename;
         switch (option) {
             case 0:
-                filter.chooseAddress(ipAddressToCompare, routingTableOperations);
-                filter.chooseLifetime(startingLifetime, endingLifetime, routingTableOperations);
+                Filter::chooseAddress(ipAddressToCompare);
+                Filter::chooseLifetime(startingLifetime, endingLifetime);
                 filtering = filter.filterEntries<RoutingTableRow>(loadedRoutingTable.begin(), loadedRoutingTable.end(), [&](const RoutingTableRow& row) {
                     return matchLifetime(row, startingLifetime, endingLifetime) && matchWithAddress(row, ipAddressToCompare);
                 });
                 break;
             case 1:
-                filter.chooseAddress(ipAddressToCompare, routingTableOperations);
+                Filter::chooseAddress(ipAddressToCompare);
                 filtering = filter.filterEntries<RoutingTableRow>(loadedRoutingTable.begin(), loadedRoutingTable.end(), [&](const RoutingTableRow& row) {
                     return matchWithAddress(row, ipAddressToCompare);
                 });
                 break;
             case 2:
-                filter.chooseLifetime(startingLifetime, endingLifetime, routingTableOperations);
+                Filter::chooseLifetime(startingLifetime, endingLifetime);
                 filtering = filter.filterEntries<RoutingTableRow>(loadedRoutingTable.begin(), loadedRoutingTable.end(), [&](const RoutingTableRow& row) {
                     return matchLifetime(row, startingLifetime, endingLifetime);
                 });
@@ -96,24 +96,24 @@ void mainLoop(RoutingTableOperations& routingTableOperations, std::vector<Routin
                     std::cout << "Save cancelled!" << std::endl;
                 }
                 else {
-                    routingTableOperations.saveToCSV(filename, loadedRoutingTable);
+                    RoutingTableOperations::saveToCSV(filename, loadedRoutingTable);
                     std::cout << "Loaded routing table saved to " << filename << std::endl;
                 }
                 break;
             case 4:
-                routingTableOperations.print(loadedRoutingTable);
+                RoutingTableOperations::print(loadedRoutingTable);
                 std::cout << "------------------------------------------\nPrinted " << loadedRoutingTable.size() << " values." << std::endl;
                 break;
             case 5:
                 if (filtering.size() > 0) {
-                    savingPrompt(filtering, filename, routingTableOperations);
+                    savingPrompt(filtering, filename);
                 }
                 else {
                     std::cout << "No filtered routing table values to save!" << std::endl;
                 }
                 break;
             case 6:
-                routingTableOperations.print(filtering);
+                RoutingTableOperations::print(filtering);
                 std::cout << "------------------------------------------\nPrinted " << filtering.size() << " values." << std::endl;
             case 7:
                 autaSavePrompt = !autaSavePrompt;
@@ -126,51 +126,15 @@ void mainLoop(RoutingTableOperations& routingTableOperations, std::vector<Routin
                 std::cout << "Invalid option!" << std::endl;
         }
         if (option > -1 && option < 3) {
-            routingTableOperations.print(filtering);
+            RoutingTableOperations::print(filtering);
             std::cout << "------------------------------------------\nFound " << filtering.size() << " values." << std::endl;
             if (autaSavePrompt) {
-                savingPrompt(filtering, filename, routingTableOperations);
+                savingPrompt(filtering, filename);
             }
         }
         option = -1;
     } while (true);
 }
-/*
-void testBitset(RoutingTableOperations& routingTableOperations) {
-    std::bitset<32> testIP = routingTableOperations.processIPAddress("192.168.44.21", nullptr);
-    std::cout << "Test IP: " << testIP << std::endl;
-    MyHierarchyTest hierarchyTest(testIP);
-    auto root = hierarchyTest.hierarchy.accessRoot();
-    std::bitset<8> firstIPOctet = std::bitset<8>(11000000);
-    std::cout << "First IP Octet " << firstIPOctet << std::endl;
-    auto firstLevel = hierarchyTest.findSon(*root, firstIPOctet);
-    std::cout << "First level " << firstLevel << std::endl;
-    std::bitset<8> secondIPOctet = std::bitset<8>(168);
-    auto secondLevel = hierarchyTest.findSon(*firstLevel->data_, secondIPOctet);
-    std::cout << "Second IP Octet " << secondIPOctet << std::endl;
-    hierarchyTest.printSons(*firstLevel->data_);
-}
-
-void testChar(RoutingTableOperations& routingTableOperations) {
-    std::bitset<32> testIP = routingTableOperations.processIPAddress("192.168.44.22", nullptr);
-    std::bitset<32> testIP2 = routingTableOperations.processIPAddress("192.168.44.21", nullptr);
-    std::cout << "Test IP: " << testIP << std::endl;
-    HierarchyChar hierarchyChar(testIP);
-    auto root = hierarchyChar.hierarchy.accessRoot();
-    //hierarchyChar.addBranch(hierarchyChar, testIP2, nullptr);
-    unsigned char firstOctetIP = 192;
-    auto firstLevel = hierarchyChar.findSon(*root, firstOctetIP);
-    unsigned char secondOctetIP = 168;
-    auto secondLevel = hierarchyChar.findSon(*firstLevel->data_, secondOctetIP);
-    unsigned char thirdOctetIP = 44;
-    auto thirdLevel = hierarchyChar.findSon(*secondLevel->data_, thirdOctetIP);
-    hierarchyChar.printSons(*thirdLevel->data_);
-    unsigned char fourthOctetIP = 21;
-    auto fourthLevel = hierarchyChar.findSon(*thirdLevel->data_, fourthOctetIP);
-    hierarchyChar.printSons(*thirdLevel->data_);
-
-}
- */
 
 int main() {
     RoutingTableOperations routingTableOperations;
@@ -188,7 +152,7 @@ int main() {
     hierarchy.printSons(*hierarchy.hierarchy.accessRoot()->sons_->accessLast()->data_->sons_->accessLast()->data_->sons_->accessLast()->data_);
     std::cout << hierarchy.hierarchy.size() << std::endl;
     std::cout << hierarchy.hierarchy.nodeCount() << std::endl;
-    mainLoop(routingTableOperations, loadedRoutingTable);
+    mainLoop(loadedRoutingTable);
     //testBitset(routingTableOperations);
     //testChar(routingTableOperations);
     return 0;

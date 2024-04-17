@@ -10,29 +10,27 @@ struct Node {
 };
 
 class MyHierarchy {
-public:
+    public:
+        ds::amt::MultiWayExplicitHierarchy<Node> hierarchy = ds::amt::MultiWayExplicitHierarchy<Node>();
 
-    ds::amt::MultiWayExplicitHierarchy<Node> hierarchy = ds::amt::MultiWayExplicitHierarchy<Node>();
+        auto findSon(ds::amt::MultiWayExplicitHierarchyBlock<Node>& node, std::bitset<8> octetParam) {
+            auto predicate = [&](ds::amt::MemoryBlock<ds::amt::MultiWayExplicitHierarchyBlock<Node>*>* block) {
+                return block->data_->data_.octet == octetParam;
+            };
+            auto result = node.sons_->findBlockWithProperty(predicate);
+            return result;
+        }
+        auto findLeaf(ds::amt::MultiWayExplicitHierarchyBlock<Node>& node, RoutingTableRow* pVector){
+            auto predicate = [&pVector](ds::amt::MemoryBlock<ds::amt::MultiWayExplicitHierarchyBlock<Node>*>* block) {
+                return block->data_->data_.pData == pVector;
+            };
+            auto result = node.sons_->findBlockWithProperty(predicate);
+            return result;
+        }
 
-    auto findSon(ds::amt::MultiWayExplicitHierarchyBlock<Node>& node, std::bitset<8> octetParam) {
-        auto predicate = [&](ds::amt::MemoryBlock<ds::amt::MultiWayExplicitHierarchyBlock<Node>*>* block) {
-            return block->data_->data_.octet == octetParam;
-        };
-        auto result = node.sons_->findBlockWithProperty(predicate);
-        return result;
-    }
-    auto findLeaf(ds::amt::MultiWayExplicitHierarchyBlock<Node>& node, RoutingTableRow* pVector){
-        auto predicate = [&pVector](ds::amt::MemoryBlock<ds::amt::MultiWayExplicitHierarchyBlock<Node>*>* block) {
-            return block->data_->data_.pData == pVector;
-        };
-        auto result = node.sons_->findBlockWithProperty(predicate);
-        return result;
-    }
-
-    MyHierarchy();
-
-    void addBranch(ds::amt::MultiWayExplicitHierarchy<Node>& hierarchyParam, std::bitset<32> sourceIP, RoutingTableRow* pVector);
-    void printSons(ds::amt::MultiWayExplicitHierarchyBlock<Node>& node);
+        MyHierarchy();
+        void addBranch(ds::amt::MultiWayExplicitHierarchy<Node>& hierarchyParam, std::bitset<32> sourceIP, RoutingTableRow* pVector);
+        void printSons(ds::amt::MultiWayExplicitHierarchyBlock<Node>& node);
 };
 
 MyHierarchy::MyHierarchy() {
