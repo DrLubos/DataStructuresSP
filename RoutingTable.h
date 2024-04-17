@@ -27,9 +27,9 @@ struct RoutingTableRow {
 class RoutingTableOperations {
 private:
     static bool isStringIPMaskFormat(const std::string& str);
-    static void printRow(const RoutingTableRow &row);
     static void saveRowToCSV(std::ofstream &file, const RoutingTableRow &row);
 public:
+    static void printRow(const RoutingTableRow &row);
     static std::bitset<32> processIPAddress(const std::string& ipAddressString, unsigned char* prefix);
     static unsigned int processLifetime(const std::string& lifetimeString);
     static std::string convertLifetime(unsigned int lifetime);
