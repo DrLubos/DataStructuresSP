@@ -26,18 +26,18 @@ struct RoutingTableRow {
 
 class RoutingTableOperations {
 private:
-    bool isStringIPMaskFormat(const std::string& str);
-    void printRow(const RoutingTableRow &row);
-    void saveRowToCSV(std::ofstream &file, const RoutingTableRow &row);
+    static bool isStringIPMaskFormat(const std::string& str);
+    static void printRow(const RoutingTableRow &row);
+    static void saveRowToCSV(std::ofstream &file, const RoutingTableRow &row);
 public:
-    std::bitset<32> processIPAddress(const std::string& ipAddressString, unsigned char* prefix);
-    unsigned int processLifetime(const std::string& lifetimeString);
-    std::string convertLifetime(unsigned int lifetime);
-    void loadFromCSV(const std::string& filename, std::vector<RoutingTableRow>& saveToVector);
-    void print(const std::vector<RoutingTableRow>& vectorToPrint);
-    void print(const std::vector<RoutingTableRow*>& vectorToPrint);
-    void saveToCSV(const std::string &filename, const std::vector<RoutingTableRow> &vectorToPrint);
-    void saveToCSV(const std::string& filename, const std::vector<RoutingTableRow*>& vectorToPrint);
+    static std::bitset<32> processIPAddress(const std::string& ipAddressString, unsigned char* prefix);
+    static unsigned int processLifetime(const std::string& lifetimeString);
+    static std::string convertLifetime(unsigned int lifetime);
+    static void loadFromCSV(const std::string& filename, std::vector<RoutingTableRow>& saveToVector);
+    static void print(const std::vector<RoutingTableRow>& vectorToPrint);
+    static void print(const std::vector<RoutingTableRow*>& vectorToPrint);
+    static void saveToCSV(const std::string &filename, const std::vector<RoutingTableRow> &vectorToPrint);
+    static void saveToCSV(const std::string& filename, const std::vector<RoutingTableRow*>& vectorToPrint);
 };
 
 bool RoutingTableOperations::isStringIPMaskFormat(const std::string& str) {
@@ -47,48 +47,6 @@ bool RoutingTableOperations::isStringIPMaskFormat(const std::string& str) {
         }
     }
     return true;
-}
-
-void RoutingTableOperations::loadFromCSV(const std::string& filename, std::vector<RoutingTableRow>& saveToVector) {
-    std::ifstream file(filename);
-    if (!file.is_open()) {
-        throw std::runtime_error("Error: Could not open file.\n");
-    }
-    std::string line;
-    unsigned int rowNumber = 1;
-    std::getline(file, line);
-    while (std::getline(file, line)) {
-        ++rowNumber;
-        std::istringstream ss(line);
-        std::vector<std::string> cells;
-        std::string cell;
-        while (std::getline(ss, cell, ';')) {
-            cells.push_back(cell);
-        }
-        if (cells.size() == 5 || cells.size() == 4) {
-            RoutingTableRow entry;
-            unsigned char prefix = 0;
-            try {
-                entry.ipAddress = processIPAddress(cells[1], &entry.prefix);
-            } catch (const std::exception& e) {
-                std::cerr << "Error: " << e.what() << " Check line " << rowNumber << std::endl;
-                continue;
-            }
-            if (cells[3][0] == 'v' && cells[3][1] == 'i' && cells[3][2] == 'a') {
-                entry.destinationIP = cells[3][3] == ' ' ? processIPAddress(cells[3].substr(4), nullptr) : processIPAddress(cells[3].substr(3), nullptr);
-            } else {
-                std::cout << "Supported only next-hop ip address, check line " << rowNumber << std::endl;
-            }
-            if (cells.size() > 4 && (std::isdigit(cells[4][0]) || std::isalpha(cells[4][0]))) {
-                entry.lifetime = processLifetime(cells[4]);
-            } else {
-                entry.lifetime = UINT_MAX;
-            }
-            saveToVector.push_back(entry);
-        } else {
-            throw std::runtime_error("Error: Invalid CSV format. Error found on line: " + std::to_string(rowNumber) + "\n");
-        }
-    }
 }
 
 void RoutingTableOperations::print(const std::vector<RoutingTableRow>& vectorToPrint) {
@@ -208,8 +166,8 @@ unsigned int RoutingTableOperations::processLifetime(const std::string& lifetime
         }
     }
     processingNumber = 0;
-    for (auto i : lifetime) {
-        processingNumber += i;
+    for (auto it : lifetime) {
+        processingNumber += it;
     }
     return processingNumber;
 }

@@ -1,6 +1,6 @@
 #include "RoutingTable.h"
 #include "Filter.h"
-#include "Hierarchy.h"
+#include "Loader.h"
 
 void selectNameOfCSVFile(std::string& defaultName) {
     std::cin.ignore();
@@ -32,7 +32,8 @@ void savingPrompt(std::vector<P>& routingTableVector, std::string& filename, Rou
             if (filename != "") {
                 routingTableOperations.saveToCSV(filename, routingTableVector);
                 std::cout << "Filtered routing table saved to " << filename << std::endl;
-            } else {
+            }
+            else {
                 std::cout << "Saving cancelled!" << std::endl;
             }
         }
@@ -63,7 +64,8 @@ void mainLoop(RoutingTableOperations& routingTableOperations, std::vector<Routin
         std::bitset<32> ipAddressToCompare;
         try {
             option = std::stoi(optionString);
-        } catch (const std::exception& e) {
+        }
+        catch (const std::exception& e) {
             option = -1;
         }
         std::string filename;
@@ -92,7 +94,8 @@ void mainLoop(RoutingTableOperations& routingTableOperations, std::vector<Routin
                 selectNameOfCSVFile(filename);
                 if (filename == "") {
                     std::cout << "Save cancelled!" << std::endl;
-                } else {
+                }
+                else {
                     routingTableOperations.saveToCSV(filename, loadedRoutingTable);
                     std::cout << "Loaded routing table saved to " << filename << std::endl;
                 }
@@ -104,7 +107,8 @@ void mainLoop(RoutingTableOperations& routingTableOperations, std::vector<Routin
             case 5:
                 if (filtering.size() > 0) {
                     savingPrompt(filtering, filename, routingTableOperations);
-                } else {
+                }
+                else {
                     std::cout << "No filtered routing table values to save!" << std::endl;
                 }
                 break;
@@ -131,17 +135,63 @@ void mainLoop(RoutingTableOperations& routingTableOperations, std::vector<Routin
         option = -1;
     } while (true);
 }
+/*
+void testBitset(RoutingTableOperations& routingTableOperations) {
+    std::bitset<32> testIP = routingTableOperations.processIPAddress("192.168.44.21", nullptr);
+    std::cout << "Test IP: " << testIP << std::endl;
+    MyHierarchyTest hierarchyTest(testIP);
+    auto root = hierarchyTest.hierarchy.accessRoot();
+    std::bitset<8> firstIPOctet = std::bitset<8>(11000000);
+    std::cout << "First IP Octet " << firstIPOctet << std::endl;
+    auto firstLevel = hierarchyTest.findSon(*root, firstIPOctet);
+    std::cout << "First level " << firstLevel << std::endl;
+    std::bitset<8> secondIPOctet = std::bitset<8>(168);
+    auto secondLevel = hierarchyTest.findSon(*firstLevel->data_, secondIPOctet);
+    std::cout << "Second IP Octet " << secondIPOctet << std::endl;
+    hierarchyTest.printSons(*firstLevel->data_);
+}
+
+void testChar(RoutingTableOperations& routingTableOperations) {
+    std::bitset<32> testIP = routingTableOperations.processIPAddress("192.168.44.22", nullptr);
+    std::bitset<32> testIP2 = routingTableOperations.processIPAddress("192.168.44.21", nullptr);
+    std::cout << "Test IP: " << testIP << std::endl;
+    HierarchyChar hierarchyChar(testIP);
+    auto root = hierarchyChar.hierarchy.accessRoot();
+    //hierarchyChar.addBranch(hierarchyChar, testIP2, nullptr);
+    unsigned char firstOctetIP = 192;
+    auto firstLevel = hierarchyChar.findSon(*root, firstOctetIP);
+    unsigned char secondOctetIP = 168;
+    auto secondLevel = hierarchyChar.findSon(*firstLevel->data_, secondOctetIP);
+    unsigned char thirdOctetIP = 44;
+    auto thirdLevel = hierarchyChar.findSon(*secondLevel->data_, thirdOctetIP);
+    hierarchyChar.printSons(*thirdLevel->data_);
+    unsigned char fourthOctetIP = 21;
+    auto fourthLevel = hierarchyChar.findSon(*thirdLevel->data_, fourthOctetIP);
+    hierarchyChar.printSons(*thirdLevel->data_);
+
+}
+ */
 
 int main() {
     RoutingTableOperations routingTableOperations;
     std::vector<RoutingTableRow> loadedRoutingTable;
+    MyHierarchy hierarchy;
     try {
-        routingTableOperations.loadFromCSV("RT.csv", loadedRoutingTable);
+        Loader::loadFromCSV("RT.csv", loadedRoutingTable, hierarchy);
     } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
+        std::cerr << e.what() << std::endl;
         return 1;
     }
     std::cout << "Routing table loaded successfully!" << std::endl;
+    hierarchy.printSons(*hierarchy.hierarchy.accessRoot());
+    hierarchy.printSons(*hierarchy.hierarchy.accessRoot()->sons_->accessFirst()->data_);
+    hierarchy.printSons(*hierarchy.hierarchy.accessRoot()->sons_->accessLast()->data_->sons_->accessLast()->data_->sons_->accessLast()->data_);
+    std::cout << hierarchy.hierarchy.size() << std::endl;
+    std::cout << hierarchy.hierarchy.nodeCount() << std::endl;
     mainLoop(routingTableOperations, loadedRoutingTable);
+    //testBitset(routingTableOperations);
+    //testChar(routingTableOperations);
     return 0;
 }
+
+// vytvorit metodu na pohyb v hiearchii a nejaky atrubut, ktory sa bude aktualizovat pri pohybe

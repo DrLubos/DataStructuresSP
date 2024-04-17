@@ -4,6 +4,7 @@
 build/
 *.csv
 .DS_Store
+/cmake-build-debug/
 
 # Prerequisites
 *.d

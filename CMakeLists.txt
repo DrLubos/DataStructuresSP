@@ -4,7 +4,7 @@ project(SemestralProject)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-add_compile_options(-Wall -fdiagnostics-color=always)
+#add_compile_options(-Wall -fdiagnostics-color=always)
 
 add_executable(SemestralProject main.cpp)
 
