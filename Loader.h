@@ -8,6 +8,7 @@ class Loader {
 
 void Loader::loadFromCSV(const std::string& filename, std::vector<RoutingTableRow>& saveToVector, MyHierarchy& hierarchy) {
     std::ifstream file(filename);
+    saveToVector.reserve(10000);
     if (!file.is_open()) {
         throw std::runtime_error("Error: Could not open file.\n");
     }

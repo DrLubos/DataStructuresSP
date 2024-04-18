@@ -31,13 +31,13 @@ class MyHierarchy {
         MyHierarchy();
         void addBranch(ds::amt::MultiWayExplicitHierarchy<Node>& hierarchyParam, std::bitset<32> sourceIP, RoutingTableRow* pVector);
         void printNodeInfo(ds::amt::MultiWayExplicitHierarchyBlock<Node>& node);
+        void printSons(ds::amt::MultiWayExplicitHierarchyBlock<Node>& node);
         std::string getOctetsToNode(ds::amt::MultiWayExplicitHierarchyBlock<Node>& node);
         void print(ds::amt::MultiWayExplicitHierarchyBlock<Node>& node);
 };
 
 MyHierarchy::MyHierarchy() {
     auto& root = hierarchy.emplaceRoot();
-    //hierarchy = ds::amt::MultiWayExplicitHierarchy<Node>();
 }
 
 void MyHierarchy::addBranch(ds::amt::MultiWayExplicitHierarchy<Node>& hierarchyParam, std::bitset<32> sourceIP, RoutingTableRow* pVector) {
@@ -100,6 +100,13 @@ void MyHierarchy::printNodeInfo(ds::amt::MultiWayExplicitHierarchyBlock<Node>& n
     if (node.sons_->isEmpty()) {
         std::cout << "No sons" << std::endl;
     } else {
+        std::cout << "Number of sons: " << (hierarchy.degree(node)) << std::endl;
+    }
+}
+
+void MyHierarchy::printSons(ds::amt::MultiWayExplicitHierarchyBlock<Node>& node) {
+    std::cout << "---------------------" << std::endl;
+    if (!node.sons_->isEmpty()) {
         std::cout << "#   " << (hierarchy.level(node)) + 1 << ". Octet Values" << std::endl;
         for (size_t i = 0; i < node.sons_->size(); ++i) {
             std::cout << i << ". Son octet: " << node.sons_->access(i)->data_->data_.octet.to_ulong() << std::endl;
@@ -111,7 +118,7 @@ void MyHierarchy::printNodeInfo(ds::amt::MultiWayExplicitHierarchyBlock<Node>& n
 std::string MyHierarchy::getOctetsToNode(ds::amt::MultiWayExplicitHierarchyBlock<Node>& node) {
     switch (hierarchy.level(node)) {
         case 0:
-            return "Nula";
+            return "";
         case 1:
             return std::to_string(node.data_.octet.to_ulong()) + ".";
         case 2:
@@ -121,15 +128,17 @@ std::string MyHierarchy::getOctetsToNode(ds::amt::MultiWayExplicitHierarchyBlock
         case 4:
             return std::to_string(node.parent_->parent_->parent_->data_.octet.to_ulong()) + "." + std::to_string(node.parent_->parent_->data_.octet.to_ulong()) + "." + std::to_string(node.parent_->data_.octet.to_ulong()) + "." + std::to_string(node.data_.octet.to_ulong()) + ".";
         default:
-            return "Default";
+            return "";
     }
 }
 
 void MyHierarchy::print(ds::amt::MultiWayExplicitHierarchyBlock<Node>& node) {
+    size_t index = 0;
     hierarchy.processPostOrder(&node, std::function<void(ds::amt::MultiWayExplicitHierarchyBlock<Node>*)>([&](ds::amt::MultiWayExplicitHierarchyBlock<Node>* node) {
         if (node->data_.pData != nullptr) {
             RoutingTableOperations::printRow(*node->data_.pData);
+            ++index;
         }
     }));
-    
+    std::cout << "-------------------------\nPrinted: " << index << " values" << std::endl;
 }

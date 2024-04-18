@@ -46,8 +46,7 @@ void hierarchyLoop(MyHierarchy& hierarchy) {
     std::string optionString;
     int option;
     bool autaSavePrompt = true;
-    auto root = *hierarchy.hierarchy.accessRoot();
-    auto actualNode = *root.sons_->accessFirst()->data_;
+    auto actualNode = *hierarchy.hierarchy.accessRoot();
     do {
         std::cout << std::endl << "Options:\n\t[0] Filter by matching IP address and lifetime" << std::endl;
         std::cout << "\t[1] Filter by matching IP address" << std::endl;
@@ -69,11 +68,13 @@ void hierarchyLoop(MyHierarchy& hierarchy) {
         } catch (const std::exception& e) {
             option = -1;
         }
+        std::vector<Node*> filteringVector;
         switch (option) {
             case 0:
                 std::cout << "Your IP should start with: " << hierarchy.getOctetsToNode(actualNode) << std::endl;
                 Filter::chooseAddress(ipAddressToCompare);
                 Filter::chooseLifetime(startingLifetime, endingLifetime);
+                filtering.clear();
                 hierarchy.hierarchy.processPostOrder(&actualNode, std::function<void(ds::amt::MultiWayExplicitHierarchyBlock<Node>*)>([&](ds::amt::MultiWayExplicitHierarchyBlock<Node>* node) {
                     if (node->data_.pData != nullptr) {
                         if (matchLifetime(*node->data_.pData, startingLifetime, endingLifetime) && matchWithAddress(*node->data_.pData, ipAddressToCompare)) {
@@ -81,23 +82,46 @@ void hierarchyLoop(MyHierarchy& hierarchy) {
                         }
                     }
                 }));
+                RoutingTableOperations::print(filtering);
+                break;
+            case 1:
+                std::cout << "Your IP should start with: " << hierarchy.getOctetsToNode(actualNode) << std::endl;
+                Filter::chooseAddress(ipAddressToCompare);
+                filtering.clear();
+                hierarchy.hierarchy.processPostOrder(&actualNode, std::function<void(ds::amt::MultiWayExplicitHierarchyBlock<Node>*)>([&](ds::amt::MultiWayExplicitHierarchyBlock<Node>* node) {
+                    if (node->data_.pData != nullptr) {
+                        if (matchWithAddress(*node->data_.pData, ipAddressToCompare)) {
+                            filtering.push_back(node->data_.pData);
+                        }
+                    }
+                }));
+                RoutingTableOperations::print(filtering);
+                break;
+            case 2:
+                Filter::chooseLifetime(startingLifetime, endingLifetime);
+                filtering.clear();
+                hierarchy.hierarchy.processPostOrder(&actualNode, std::function<void(ds::amt::MultiWayExplicitHierarchyBlock<Node>*)>([&](ds::amt::MultiWayExplicitHierarchyBlock<Node>* node) {
+                    if (node->data_.pData != nullptr) {
+                        if (matchLifetime(*node->data_.pData, startingLifetime, endingLifetime)) {
+                            filtering.push_back(node->data_.pData);
+                        }
+                    }
+                }));
+                RoutingTableOperations::print(filtering);
                 break;
             case 3:
                 hierarchy.printNodeInfo(actualNode);
                 break;
             case 4:
-                 if (actualNode.parent_ != nullptr) {
-                    auto a = *actualNode.parent_;
-                    std::cout << "a " << typeid(a).name() << std::endl;
-                    std::cout << "actualNode " << typeid(actualNode).name() << std::endl;
-                    auto b = *actualNode.parent_->parent_;
-                }
-                else {
+                if (actualNode.parent_ != nullptr) {
+                    actualNode = *hierarchy.hierarchy.accessParent(actualNode);
+                } else {
                     std::cout << "You are at the root node!" << std::endl;
                 }
                 break;
             case 5:
                 hierarchy.printNodeInfo(actualNode);
+                hierarchy.printSons(actualNode);
                 if (actualNode.sons_->isEmpty()) {
                     std::cout << "No sons to go to!" << std::endl;
                     break;
