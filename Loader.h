@@ -1,14 +1,15 @@
-#include "HierarchyTable.h"
+#include "HierarchyManager.h"
 #include "RoutingTable.h"
+#include <libds/heap_monitor.h>
 
 class Loader {
-    public:
-        static void loadFromCSV(const std::string& filename, std::vector<RoutingTableRow>& saveToVector, MyHierarchy& hierarchy);
+public:
+    static void loadFromCSV(const std::string& filename, std::vector<RoutingTableRow>& saveToVector, HierarchyManager& hierarchy);
 };
 
-void Loader::loadFromCSV(const std::string& filename, std::vector<RoutingTableRow>& saveToVector, MyHierarchy& hierarchy) {
+void Loader::loadFromCSV(const std::string& filename, std::vector<RoutingTableRow>& saveToVector, HierarchyManager& hierarchy) {
     std::ifstream file(filename);
-    saveToVector.reserve(10000);
+    saveToVector.reserve(20000);
     if (!file.is_open()) {
         throw std::runtime_error("Error: Could not open file.\n");
     }

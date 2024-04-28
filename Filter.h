@@ -1,11 +1,12 @@
 #include "RoutingTable.h"
+#include <libds/heap_monitor.h>
 
 auto matchLifetime = [](const RoutingTableRow& row, unsigned int startTime, unsigned int endTime) {
     if (row.lifetime >= startTime && row.lifetime <= endTime) {
         return true;
     }
     return false;
-};
+    };
 
 auto matchWithAddress = [](const RoutingTableRow& row, const std::bitset<32>& addressToCompare) {
     std::bitset<32> ipAddress = row.ipAddress;
@@ -15,14 +16,26 @@ auto matchWithAddress = [](const RoutingTableRow& row, const std::bitset<32>& ad
         }
     }
     return true;
-};
+    };
+
+//auto matchWithAddressHierarchy = [](const Node& node, const std::bitset<32>& addressToCompare) {
+//    if (node.pData != nullptr) {
+//        std::bitset<32> ipAddress = node.pData->ipAddress;
+//        for (int i = 0; i < node.pData->prefix; ++i) {
+//            if (ipAddress[ipAddress.size() - i - 1] != addressToCompare[addressToCompare.size() - i - 1]) {
+//                return false;
+//            }
+//        }
+//        return true;
+//    }
+//};
 
 class Filter {
-    public:
-        template<typename P, typename Iterator>
-        std::vector<P*> filterEntries(Iterator begin, Iterator end, std::function<bool(const P&)> pred);
-        static void chooseLifetime(unsigned int& startingLifetime, unsigned int& endingLifetime);
-        static void chooseAddress(std::bitset<32>& ipAddressToCompare);
+public:
+    template<typename P, typename Iterator>
+    std::vector<P*> filterEntries(Iterator begin, Iterator end, std::function<bool(const P&)> pred);
+    static void chooseLifetime(unsigned int& startingLifetime, unsigned int& endingLifetime);
+    static void chooseAddress(std::bitset<32>& ipAddressToCompare);
 };
 
 template<typename P, typename Iterator>
