@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <bitset>
 #include <functional>
+#include <libds/heap_monitor.h>
 
 bool isStringNumeric(const std::string& str) {
     for (char c : str) {
@@ -27,15 +28,15 @@ struct RoutingTableRow {
 class RoutingTableOperations {
 private:
     static bool isStringIPMaskFormat(const std::string& str);
-    static void saveRowToCSV(std::ofstream &file, const RoutingTableRow &row);
+    static void saveRowToCSV(std::ofstream& file, const RoutingTableRow& row);
 public:
-    static void printRow(const RoutingTableRow &row);
+    static void printRow(const RoutingTableRow& row);
     static std::bitset<32> processIPAddress(const std::string& ipAddressString, unsigned char* prefix);
     static unsigned int processLifetime(const std::string& lifetimeString);
     static std::string convertLifetime(unsigned int lifetime);
     static void print(const std::vector<RoutingTableRow>& vectorToPrint);
     static void print(const std::vector<RoutingTableRow*>& vectorToPrint);
-    static void saveToCSV(const std::string &filename, const std::vector<RoutingTableRow> &vectorToPrint);
+    static void saveToCSV(const std::string& filename, const std::vector<RoutingTableRow>& vectorToPrint);
     static void saveToCSV(const std::string& filename, const std::vector<RoutingTableRow*>& vectorToPrint);
 };
 
@@ -55,7 +56,7 @@ void RoutingTableOperations::print(const std::vector<RoutingTableRow>& vectorToP
 }
 
 void RoutingTableOperations::print(const std::vector<RoutingTableRow*>& vectorToPrint) {
-    for(const RoutingTableRow* row : vectorToPrint) {
+    for (const RoutingTableRow* row : vectorToPrint) {
         printRow(*row);
     }
 }
@@ -88,26 +89,26 @@ unsigned int RoutingTableOperations::processLifetime(const std::string& lifetime
     bool hoursMuliply = true;
     bool minutesMuliply = true;
     size_t i = 0;
-    if (!lifetimeString.empty() && !std::isdigit(lifetimeString[0])) {
+    if (lifetimeString.size() > 0 && !std::isdigit(lifetimeString[0])) {
         switch (lifetimeString[0]) {
-            case 'w':
-                lifetime.push_back(60 * 60 * 24 * 7);
-                ++i;
-                break;
-            case 'd':
-                lifetime.push_back(60 * 60 * 24);
-                ++i;
-                break;
-            case 'h':
-                lifetime.push_back(60 * 60);
-                ++i;
-                break;
-            case 'm':
-                lifetime.push_back(60);
-                ++i;
-                break;
-            case 's':
-                return 1;
+        case 'w':
+            lifetime.push_back(60 * 60 * 24 * 7);
+            ++i;
+            break;
+        case 'd':
+            lifetime.push_back(60 * 60 * 24);
+            ++i;
+            break;
+        case 'h':
+            lifetime.push_back(60 * 60);
+            ++i;
+            break;
+        case 'm':
+            lifetime.push_back(60);
+            ++i;
+            break;
+        case 's':
+            return 1;
         }
     }
     for (; i < lifetimeString.size(); ++i) {
@@ -124,14 +125,14 @@ unsigned int RoutingTableOperations::processLifetime(const std::string& lifetime
                         hoursMuliply = false;
                         processingNumber = 0;
                         continue;
-                    } 
+                    }
                     if (minutesMuliply) {
                         lifetime.push_back(60 * processingNumber);
                         minutesMuliply = false;
                         processingNumber = 0;
                         continue;
                     }
-                } 
+                }
                 if (!minutesMuliply) {
                     lifetime.push_back(processingNumber);
                     processingNumber = 0;
@@ -165,8 +166,8 @@ unsigned int RoutingTableOperations::processLifetime(const std::string& lifetime
         }
     }
     processingNumber = 0;
-    for (auto it : lifetime) {
-        processingNumber += it;
+    for (auto i : lifetime) {
+        processingNumber += i;
     }
     return processingNumber;
 }
