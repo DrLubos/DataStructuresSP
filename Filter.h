@@ -18,35 +18,22 @@ auto matchWithAddress = [](const RoutingTableRow& row, const std::bitset<32>& ad
     return true;
     };
 
-//auto matchWithAddressHierarchy = [](const Node& node, const std::bitset<32>& addressToCompare) {
-//    if (node.pData != nullptr) {
-//        std::bitset<32> ipAddress = node.pData->ipAddress;
-//        for (int i = 0; i < node.pData->prefix; ++i) {
-//            if (ipAddress[ipAddress.size() - i - 1] != addressToCompare[addressToCompare.size() - i - 1]) {
-//                return false;
-//            }
-//        }
-//        return true;
-//    }
-//};
-
 class Filter {
 public:
-    template<typename P, typename Iterator>
-    std::vector<P*> filterEntries(Iterator begin, Iterator end, std::function<bool(const P&)> pred);
     static void chooseLifetime(unsigned int& startingLifetime, unsigned int& endingLifetime);
     static void chooseAddress(std::bitset<32>& ipAddressToCompare);
+    template<typename Pred, typename Seq, typename Iterator>
+    static void filterEntries(Iterator begin, Iterator end, Pred pred, Seq& sequence);
 };
 
-template<typename P, typename Iterator>
-std::vector<P*> Filter::filterEntries(Iterator begin, Iterator end, std::function<bool(const P&)> pred) {
-    std::vector<P*> filtered;
+template<typename Pred, typename Seq, typename Iterator>
+void Filter::filterEntries(Iterator begin, Iterator end, Pred pred, Seq& sequence) {
     for (auto it = begin; it != end; ++it) {
         if (pred(*it)) {
-            filtered.push_back(&(*it));
+            //std::cout << typeid(*it).name() << std::endl;
+            sequence.insertLast().data_ = &(*it);
         }
     }
-    return filtered;
 }
 
 void Filter::chooseLifetime(unsigned int& startingLifetime, unsigned int& endingLifetime) {
@@ -73,7 +60,7 @@ void Filter::chooseLifetime(unsigned int& startingLifetime, unsigned int& ending
 void Filter::chooseAddress(std::bitset<32>& ipAddressToCompare) {
     bool validIpAddress = false;
     while (!validIpAddress) {
-        std::cout << "Insert IP address to filter: ";
+        std::cout << "Insert IP address to filter (W.X.Y.Z): ";
         std::string ipAddressString;
         std::cin >> ipAddressString;
         try {
