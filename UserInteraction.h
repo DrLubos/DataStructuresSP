@@ -30,6 +30,8 @@ void UserInteraction::printOptions() {
     std::cout << "\t[14] Go to parent" << std::endl;
     std::cout << "\t[15] Go to son" << std::endl;
     std::cout << "\t[16] Print leafs" << std::endl;
+    std::cout << "\t------------------ Table mode ------------------" << std::endl;
+    std::cout << "\t[21] Filter table by destination IP address" << std::endl;
     std::cout << "Your option: ";
 }
 

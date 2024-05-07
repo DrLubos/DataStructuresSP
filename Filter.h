@@ -6,7 +6,7 @@ auto matchLifetime = [](const RoutingTableRow& row, unsigned int startTime, unsi
         return true;
     }
     return false;
-    };
+};
 
 auto matchWithAddress = [](const RoutingTableRow& row, const std::bitset<32>& addressToCompare) {
     std::bitset<32> ipAddress = row.ipAddress;
@@ -16,7 +16,7 @@ auto matchWithAddress = [](const RoutingTableRow& row, const std::bitset<32>& ad
         }
     }
     return true;
-    };
+};
 
 class Filter {
 public:

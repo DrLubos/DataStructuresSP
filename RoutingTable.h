@@ -9,6 +9,14 @@
 #include <functional>
 #include <libds/heap_monitor.h>
 
+bool operator>(const std::bitset<32>& first, const std::bitset<32>& second) {
+    return (first.to_ulong() > second.to_ulong());
+}
+
+bool operator<(const std::bitset<32>& first, const std::bitset<32>& second) {
+    return (first.to_ulong() < second.to_ulong());
+}
+
 bool isStringNumeric(const std::string& str) {
     for (char c : str) {
         if (!std::isdigit(c)) {
@@ -91,24 +99,24 @@ unsigned int RoutingTableOperations::processLifetime(const std::string& lifetime
     size_t i = 0;
     if (lifetimeString.size() > 0 && !std::isdigit(lifetimeString[0])) {
         switch (lifetimeString[0]) {
-        case 'w':
-            lifetime.push_back(60 * 60 * 24 * 7);
-            ++i;
-            break;
-        case 'd':
-            lifetime.push_back(60 * 60 * 24);
-            ++i;
-            break;
-        case 'h':
-            lifetime.push_back(60 * 60);
-            ++i;
-            break;
-        case 'm':
-            lifetime.push_back(60);
-            ++i;
-            break;
-        case 's':
-            return 1;
+            case 'w':
+                lifetime.push_back(60 * 60 * 24 * 7);
+                ++i;
+                break;
+            case 'd':
+                lifetime.push_back(60 * 60 * 24);
+                ++i;
+                break;
+            case 'h':
+                lifetime.push_back(60 * 60);
+                ++i;
+                break;
+            case 'm':
+                lifetime.push_back(60);
+                ++i;
+                break;
+            case 's':
+                return 1;
         }
     }
     for (; i < lifetimeString.size(); ++i) {
@@ -139,26 +147,26 @@ unsigned int RoutingTableOperations::processLifetime(const std::string& lifetime
                     continue;
                 }
                 switch (lifetimeString[i + 1]) {
-                case 'w':
-                    lifetime.push_back(60 * 60 * 24 * 7 * processingNumber);
-                    processingNumber = 0;
-                    break;
-                case 'd':
-                    lifetime.push_back(60 * 60 * 24 * processingNumber);
-                    processingNumber = 0;
-                    break;
-                case 'h':
-                    lifetime.push_back(60 * 60 * processingNumber);
-                    processingNumber = 0;
-                    break;
-                case 'm':
-                    lifetime.push_back(60 * processingNumber);
-                    processingNumber = 0;
-                    break;
-                case 's':
-                    lifetime.push_back(processingNumber);
-                    processingNumber = 0;
-                    break;
+                    case 'w':
+                        lifetime.push_back(60 * 60 * 24 * 7 * processingNumber);
+                        processingNumber = 0;
+                        break;
+                    case 'd':
+                        lifetime.push_back(60 * 60 * 24 * processingNumber);
+                        processingNumber = 0;
+                        break;
+                    case 'h':
+                        lifetime.push_back(60 * 60 * processingNumber);
+                        processingNumber = 0;
+                        break;
+                    case 'm':
+                        lifetime.push_back(60 * processingNumber);
+                        processingNumber = 0;
+                        break;
+                    case 's':
+                        lifetime.push_back(processingNumber);
+                        processingNumber = 0;
+                        break;
                 }
             }
             lifetime.push_back(processingNumber);

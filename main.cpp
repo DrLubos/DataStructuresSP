@@ -3,7 +3,7 @@
 #include "Loader.h"
 #include "UserInteraction.h"
 #include <libds/amt/implicit_sequence.h>
-#include "TableManager.h"
+#include <libds/adt/list.h>
 #include <libds/heap_monitor.h>
 
 auto matchWithAddressHierarchy = [](const Node& node, const std::bitset<32>& addressToCompare) {
@@ -29,7 +29,7 @@ auto matchLifetimeHierarchy = [](const Node& node, unsigned int startTime, unsig
     return false;
 };
 
-void mainLoop(std::vector<RoutingTableRow>& loadedRoutingTable, HierarchyManager& hierarchyManager) {
+void mainLoop(std::vector<RoutingTableRow>& loadedRoutingTable, HierarchyManager& hierarchyManager, TableManager& tableManager) {
     std::vector<RoutingTableRow*> filtering;
     ds::amt::IS<RoutingTableRow*> filteringSequence;
     ds::amt::IS<Node*> filteringSequenceHierarchy;
@@ -58,7 +58,7 @@ void mainLoop(std::vector<RoutingTableRow>& loadedRoutingTable, HierarchyManager
                 Filter::chooseAddress(ipAddressToCompare);
                 Filter::chooseLifetime(startingLifetime, endingLifetime);
                 Filter::filterEntries(loadedRoutingTable.begin(), loadedRoutingTable.end(),
-                                      [&](const RoutingTableRow &row) {
+                                      [&](const RoutingTableRow& row) {
                                           return matchWithAddress(row, ipAddressToCompare) &&
                                                  matchLifetime(row, startingLifetime, endingLifetime);
                                       }, filteringSequence);
@@ -67,7 +67,7 @@ void mainLoop(std::vector<RoutingTableRow>& loadedRoutingTable, HierarchyManager
                 filteringSequence.clear();
                 Filter::chooseAddress(ipAddressToCompare);
                 Filter::filterEntries(loadedRoutingTable.begin(), loadedRoutingTable.end(),
-                                      [&](const RoutingTableRow &row) {
+                                      [&](const RoutingTableRow& row) {
                                           return matchWithAddress(row, ipAddressToCompare);
                                       }, filteringSequence);
                 break;
@@ -75,7 +75,7 @@ void mainLoop(std::vector<RoutingTableRow>& loadedRoutingTable, HierarchyManager
                 filteringSequence.clear();
                 Filter::chooseLifetime(startingLifetime, endingLifetime);
                 Filter::filterEntries(loadedRoutingTable.begin(), loadedRoutingTable.end(),
-                                      [&](const RoutingTableRow &row) {
+                                      [&](const RoutingTableRow& row) {
                                           return matchLifetime(row, startingLifetime, endingLifetime);
                                       }, filteringSequence);
                 break;
@@ -112,7 +112,7 @@ void mainLoop(std::vector<RoutingTableRow>& loadedRoutingTable, HierarchyManager
                 Filter::chooseLifetime(startingLifetime, endingLifetime);
                 ds::amt::MultiWayExplicitHierarchy<Node>::PreOrderHierarchyIterator begin(&hierarchyManager.hierarchy, actualNode);
                 ds::amt::MultiWayExplicitHierarchy<Node>::PreOrderHierarchyIterator end(&hierarchyManager.hierarchy, nullptr);
-                Filter::filterEntries(begin, end, [&](const Node &node) {
+                Filter::filterEntries(begin, end, [&](const Node& node) {
                     return matchWithAddressHierarchy(node, ipAddressToCompare) &&
                            matchLifetimeHierarchy(node, startingLifetime, endingLifetime);
                 }, filteringSequenceHierarchy);
@@ -125,7 +125,7 @@ void mainLoop(std::vector<RoutingTableRow>& loadedRoutingTable, HierarchyManager
                 Filter::chooseAddress(ipAddressToCompare);
                 ds::amt::MultiWayExplicitHierarchy<Node>::PreOrderHierarchyIterator begin(&hierarchyManager.hierarchy, actualNode);
                 ds::amt::MultiWayExplicitHierarchy<Node>::PreOrderHierarchyIterator end(&hierarchyManager.hierarchy, nullptr);
-                Filter::filterEntries(begin, end, [&](const Node &node) {
+                Filter::filterEntries(begin, end, [&](const Node& node) {
                     return matchWithAddressHierarchy(node, ipAddressToCompare);
                 }, filteringSequenceHierarchy);
                 break;
@@ -136,7 +136,7 @@ void mainLoop(std::vector<RoutingTableRow>& loadedRoutingTable, HierarchyManager
                 Filter::chooseLifetime(startingLifetime, endingLifetime);
                 ds::amt::MultiWayExplicitHierarchy<Node>::PreOrderHierarchyIterator begin(&hierarchyManager.hierarchy, actualNode);
                 ds::amt::MultiWayExplicitHierarchy<Node>::PreOrderHierarchyIterator end(&hierarchyManager.hierarchy, nullptr);
-                Filter::filterEntries(begin, end, [&](const Node &node) {
+                Filter::filterEntries(begin, end, [&](const Node& node) {
                     return matchLifetimeHierarchy(node, startingLifetime, endingLifetime);
                 }, filteringSequenceHierarchy);
                 break;
@@ -176,10 +176,14 @@ void mainLoop(std::vector<RoutingTableRow>& loadedRoutingTable, HierarchyManager
                 hierarchyManager.printNodeInfo(*actualNode);
                 hierarchyManager.print(*actualNode);
                 break;
+            case 21:
+                Filter::chooseAddress(ipAddressToCompare);
+                tableManager.findRowWithKey(ipAddressToCompare, filteringSequence);
+                break;
             default:
                 std::cout << "Invalid option!" << std::endl;
         }
-        if (option > -1 && option < 3) {
+        if (option > -1 && option < 3 || option == 21) {
             filteringSequenceHierarchy.clear();
             if (!filteringSequence.isEmpty()) {
                 ds::amt::IS<RoutingTableRow*>::ImplicitSequenceIterator begin = filteringSequence.begin();
@@ -205,56 +209,29 @@ void mainLoop(std::vector<RoutingTableRow>& loadedRoutingTable, HierarchyManager
     } while (true);
 }
 
+void deleteTable(std::vector<RoutingTableRow>& loadedRoutingTable, TableManager& tableManager) {
+    ds::adt::ImplicitList<std::bitset<32>> destAddresses;
+    for (auto& row : loadedRoutingTable) {
+        if (!destAddresses.contains(row.destinationIP)) {
+            destAddresses.insertLast(row.destinationIP);
+        }
+    }
+    tableManager.removeEntries(destAddresses);
+}
+
 int main() {
     //initHeapMonitor();
     std::vector<RoutingTableRow> loadedRoutingTable;
     HierarchyManager hierarchyManager;
+    TableManager tableManager;
     try {
-        Loader::loadFromCSV("RT.csv", loadedRoutingTable, hierarchyManager);
+        Loader::loadFromCSV("RT.csv", loadedRoutingTable, hierarchyManager, tableManager);
     } catch (const std::exception& e) {
         std::cerr << e.what() << std::endl;
         return 1;
     }
-    std::cout << "Routing table loaded successfully! Values in vector: " << loadedRoutingTable.size() << ". Values in hierarchy: " << hierarchyManager.hierarchy.size() << std::endl;
-    mainLoop(loadedRoutingTable, hierarchyManager);
+    std::cout << "Routing table loaded successfully! Values in vector: " << loadedRoutingTable.size() << ". Values in hierarchy: " << hierarchyManager.hierarchy.size() << ". Table size: " << tableManager.table->size() << std::endl;
+    mainLoop(loadedRoutingTable, hierarchyManager, tableManager);
+    deleteTable(loadedRoutingTable, tableManager);
     return 0;
 }
-/*
-Debug
- hierarchy.printNodeInfo(*hierarchy.hierarchy.accessRoot());
-    hierarchy.printNodeInfo(*hierarchy.hierarchy.accessRoot()->sons_->accessFirst()->data_);
-    hierarchy.printNodeInfo(*hierarchy.hierarchy.accessRoot()->sons_->accessLast()->data_->sons_->accessLast()->data_->sons_->accessLast()->data_);
-    std::cout << hierarchy.hierarchy.size() << std::endl;
-    std::cout << hierarchy.hierarchy.nodeCount() << std::endl;
-*/
-//Old things:
-/* case 10
-hierarchyManager.hierarchy.processPostOrder(actualNode, std::function<void(ds::amt::MultiWayExplicitHierarchyBlock<Node>*)>([&](ds::amt::MultiWayExplicitHierarchyBlock<Node>* node) {
-    if (node->data_.pData != nullptr) {
-        if (matchLifetime(*node->data_.pData, startingLifetime, endingLifetime) && matchWithAddress(*node->data_.pData, ipAddressToCompare)) {
-            filtering.push_back(node->data_.pData);
-        }
-    }
-    }));
-*/
-/* case 11
-filtering.clear();
-hierarchyManager.hierarchy.processPostOrder(actualNode, std::function<void(
-    ds::amt::MultiWayExplicitHierarchyBlock<Node> *)>(
-        [&](ds::amt::MultiWayExplicitHierarchyBlock<Node>* node) {
-            if (node->data_.pData != nullptr && hierarchyManager.hierarchy.level(*node) == 4) {
-                if (matchWithAddress(*node->data_.pData, ipAddressToCompare)) {
-                    filtering.push_back(node->data_.pData);
-                }
-            }
-        }));
-*/
-/* case 12
-hierarchyManager.hierarchy.processPostOrder(actualNode, std::function<void(ds::amt::MultiWayExplicitHierarchyBlock<Node>*)>([&](ds::amt::MultiWayExplicitHierarchyBlock<Node>* node) {
-     if (node->data_.pData != nullptr) {
-         if (matchLifetime(*node->data_.pData, startingLifetime, endingLifetime)) {
-             filtering.push_back(node->data_.pData);
-         }
-     }
-     }));
-*/

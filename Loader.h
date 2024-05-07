@@ -1,13 +1,14 @@
 #include "HierarchyManager.h"
+#include "TableManager.h"
 #include "RoutingTable.h"
 #include <libds/heap_monitor.h>
 
 class Loader {
 public:
-    static void loadFromCSV(const std::string& filename, std::vector<RoutingTableRow>& saveToVector, HierarchyManager& hierarchy);
+    static void loadFromCSV(const std::string& filename, std::vector<RoutingTableRow>& saveToVector, HierarchyManager& hierarchy, TableManager& tableManager);
 };
 
-void Loader::loadFromCSV(const std::string& filename, std::vector<RoutingTableRow>& saveToVector, HierarchyManager& hierarchy) {
+void Loader::loadFromCSV(const std::string& filename, std::vector<RoutingTableRow>& saveToVector, HierarchyManager& hierarchy, TableManager& tableManager) {
     std::ifstream file(filename);
     saveToVector.reserve(20000);
     if (!file.is_open()) {
@@ -44,6 +45,7 @@ void Loader::loadFromCSV(const std::string& filename, std::vector<RoutingTableRo
             }
             saveToVector.push_back(entry);
             hierarchy.addBranch(hierarchy.hierarchy, entry.ipAddress, &saveToVector.back());
+            tableManager.addEntry(entry.destinationIP, &saveToVector.back());
         } else {
             throw std::runtime_error("Error: Invalid CSV format. Error found on line: " + std::to_string(rowNumber) + "\n");
         }
