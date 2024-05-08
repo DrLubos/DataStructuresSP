@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <bitset>
 #include <functional>
+#include <libds/amt/implicit_sequence.h>
 #include <libds/heap_monitor.h>
 
 bool operator>(const std::bitset<32>& first, const std::bitset<32>& second) {
@@ -15,15 +16,6 @@ bool operator>(const std::bitset<32>& first, const std::bitset<32>& second) {
 
 bool operator<(const std::bitset<32>& first, const std::bitset<32>& second) {
     return (first.to_ulong() < second.to_ulong());
-}
-
-bool isStringNumeric(const std::string& str) {
-    for (char c : str) {
-        if (!std::isdigit(c)) {
-            return false;
-        }
-    }
-    return true;
 }
 
 struct RoutingTableRow {
@@ -38,15 +30,24 @@ private:
     static bool isStringIPMaskFormat(const std::string& str);
     static void saveRowToCSV(std::ofstream& file, const RoutingTableRow& row);
 public:
+    static bool isStringNumeric(const std::string& str);
     static void printRow(const RoutingTableRow& row);
     static std::bitset<32> processIPAddress(const std::string& ipAddressString, unsigned char* prefix);
     static unsigned int processLifetime(const std::string& lifetimeString);
     static std::string convertLifetime(unsigned int lifetime);
     static void print(const std::vector<RoutingTableRow>& vectorToPrint);
-    static void print(const std::vector<RoutingTableRow*>& vectorToPrint);
     static void saveToCSV(const std::string& filename, const std::vector<RoutingTableRow>& vectorToPrint);
-    static void saveToCSV(const std::string& filename, const std::vector<RoutingTableRow*>& vectorToPrint);
+    static void saveFilteredToCSV(const std::string& filename, ds::amt::IS<RoutingTableRow*>& sequence);
 };
+
+bool RoutingTableOperations::isStringNumeric(const std::string &str) {
+    for (char c : str) {
+        if (!std::isdigit(c)) {
+            return false;
+        }
+    }
+    return true;
+}
 
 bool RoutingTableOperations::isStringIPMaskFormat(const std::string& str) {
     for (char c : str) {
@@ -60,12 +61,6 @@ bool RoutingTableOperations::isStringIPMaskFormat(const std::string& str) {
 void RoutingTableOperations::print(const std::vector<RoutingTableRow>& vectorToPrint) {
     for (const RoutingTableRow& row : vectorToPrint) {
         printRow(row);
-    }
-}
-
-void RoutingTableOperations::print(const std::vector<RoutingTableRow*>& vectorToPrint) {
-    for (const RoutingTableRow* row : vectorToPrint) {
-        printRow(*row);
     }
 }
 
@@ -255,21 +250,6 @@ void RoutingTableOperations::saveToCSV(const std::string& filename, const std::v
     file.close();
 }
 
-void RoutingTableOperations::saveToCSV(const std::string& filename, const std::vector<RoutingTableRow*>& vectorToPrint) {
-    std::ofstream file(filename);
-    if (file.is_open()) {
-        file << "IP/Prefix;Next-Hop;Lifetime\n";
-        for (size_t i = 0; i < vectorToPrint.size(); ++i) {
-            const auto& row = *vectorToPrint[i];
-            saveRowToCSV(file, row);
-            if (i < vectorToPrint.size() - 1) {
-                file << "\n";
-            }
-        }
-    }
-    file.close();
-}
-
 void RoutingTableOperations::saveRowToCSV(std::ofstream& file, const RoutingTableRow& row) {
     std::string ipAddressString = row.ipAddress.to_string();
     std::string destinationIPString = row.destinationIP.to_string();
@@ -318,4 +298,20 @@ std::bitset<32> RoutingTableOperations::processIPAddress(const std::string& ipAd
         }
     }
     return ipAddressBits;
+}
+
+void RoutingTableOperations::saveFilteredToCSV(const std::string& filename, ds::amt::IS<RoutingTableRow*>& sequence) {
+    std::ofstream file(filename);
+    if (file.is_open()) {
+        file << "IP/Prefix;Next-Hop;Lifetime\n";
+        ds::amt::IS<RoutingTableRow*>::IteratorType begin = sequence.begin();
+        ds::amt::IS<RoutingTableRow*>::IteratorType end = sequence.end();
+        while (begin != end) {
+            saveRowToCSV(file, **begin);
+            if (++begin != end) {
+                file << "\n";
+            }
+        }
+    }
+    file.close();
 }

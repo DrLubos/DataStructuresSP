@@ -6,8 +6,7 @@ class UserInteraction {
 	public:
 		static void printOptions();
 		static void selectNameOfCSVFile(std::string& defaultName);
-		template<typename P>
-        static void savingPrompt(std::vector<P>& routingTableVector, std::string& filename);
+        static void savingPrompt(ds::amt::IS<RoutingTableRow*>& routingTableVector, std::string& filename);
 };
 
 void UserInteraction::printOptions() {
@@ -53,9 +52,8 @@ void UserInteraction::selectNameOfCSVFile(std::string& defaultName) {
     defaultName = filename;
 }
 
-template<typename P>
-void UserInteraction::savingPrompt(std::vector<P>& routingTableVector, std::string& filename) {
-    if (!routingTableVector.empty()) {
+void UserInteraction::savingPrompt(ds::amt::IS<RoutingTableRow*>& sequence, std::string& filename) {
+    if (!sequence.isEmpty()) {
         char choice;
         std::cout << "Do you want to save the filtered table to a CSV file? (y/n):";
         std::cin >> choice;
@@ -63,7 +61,7 @@ void UserInteraction::savingPrompt(std::vector<P>& routingTableVector, std::stri
             filename = "RT_Filtered.csv";
             UserInteraction::selectNameOfCSVFile(filename);
             if (!filename.empty()) {
-                RoutingTableOperations::saveToCSV(filename, routingTableVector);
+                RoutingTableOperations::saveFilteredToCSV(filename, sequence);
                 std::cout << "Filtered routing table saved to " << filename << std::endl;
             } else {
                 std::cout << "Saving cancelled!" << std::endl;

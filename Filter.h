@@ -23,14 +23,13 @@ public:
     static void chooseLifetime(unsigned int& startingLifetime, unsigned int& endingLifetime);
     static void chooseAddress(std::bitset<32>& ipAddressToCompare);
     template<typename Pred, typename Seq, typename Iterator>
-    static void filterEntries(Iterator begin, Iterator end, Pred pred, Seq& sequence);
+    static void filterEntries(Iterator begin, Iterator end, Pred predicate, Seq& sequence);
 };
 
 template<typename Pred, typename Seq, typename Iterator>
-void Filter::filterEntries(Iterator begin, Iterator end, Pred pred, Seq& sequence) {
+void Filter::filterEntries(Iterator begin, Iterator end, Pred predicate, Seq& sequence) {
     for (auto it = begin; it != end; ++it) {
-        if (pred(*it)) {
-            //std::cout << typeid(*it).name() << std::endl;
+        if (predicate(*it)) {
             sequence.insertLast().data_ = &(*it);
         }
     }
@@ -41,12 +40,12 @@ void Filter::chooseLifetime(unsigned int& startingLifetime, unsigned int& ending
     std::string end;
     std::cout << "Insert minimum possible starting lifetime (s) or (XwXdXhXmXs) or (HH:MM:SS): ";
     std::cin >> start;
-    startingLifetime = isStringNumeric(start) ? std::stoul(start) : RoutingTableOperations::processLifetime(start);
+    startingLifetime = RoutingTableOperations::isStringNumeric(start) ? std::stoul(start) : RoutingTableOperations::processLifetime(start);
     std::cout << "Insert maximum possible ending lifetime (s) or (XwXdXhXmXs) or (HH:MM:SS) or (-1) to check without maximum possible ending: ";
     std::cin >> end;
     if (end[0] == '-' && end[1] == '1') {
         endingLifetime = UINT_MAX;
-    } else if (isStringNumeric(end)) {
+    } else if (RoutingTableOperations::isStringNumeric(end)) {
         endingLifetime = std::stoul(end);
     } else {
         endingLifetime = RoutingTableOperations::processLifetime(end);

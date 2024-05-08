@@ -44,7 +44,7 @@ void Loader::loadFromCSV(const std::string& filename, std::vector<RoutingTableRo
                 entry.lifetime = UINT_MAX;
             }
             saveToVector.push_back(entry);
-            hierarchy.addBranch(hierarchy.hierarchy, entry.ipAddress, &saveToVector.back());
+            hierarchy.addBranch(entry.ipAddress, &saveToVector.back());
             tableManager.addEntry(entry.destinationIP, &saveToVector.back());
         } else {
             throw std::runtime_error("Error: Invalid CSV format. Error found on line: " + std::to_string(rowNumber) + "\n");

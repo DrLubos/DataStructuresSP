@@ -1,10 +1,17 @@
-//#include "RoutingTable.h"
 #include "Filter.h"
 #include "Loader.h"
 #include "UserInteraction.h"
-#include <libds/amt/implicit_sequence.h>
-#include <libds/adt/list.h>
 #include <libds/heap_monitor.h>
+
+auto matchLifetimeHierarchy = [](const Node& node, unsigned int startTime, unsigned int endTime) {
+    if (node.pData != nullptr) {
+        if (node.pData->lifetime >= startTime && node.pData->lifetime <= endTime) {
+            return true;
+        }
+        return false;
+    }
+    return false;
+};
 
 auto matchWithAddressHierarchy = [](const Node& node, const std::bitset<32>& addressToCompare) {
     if (node.pData != nullptr) {
@@ -19,18 +26,7 @@ auto matchWithAddressHierarchy = [](const Node& node, const std::bitset<32>& add
     return false;
 };
 
-auto matchLifetimeHierarchy = [](const Node& node, unsigned int startTime, unsigned int endTime) {
-    if (node.pData != nullptr) {
-        if (node.pData->lifetime >= startTime && node.pData->lifetime <= endTime) {
-            return true;
-        }
-        return false;
-    }
-    return false;
-};
-
 void mainLoop(std::vector<RoutingTableRow>& loadedRoutingTable, HierarchyManager& hierarchyManager, TableManager& tableManager) {
-    std::vector<RoutingTableRow*> filtering;
     ds::amt::IS<RoutingTableRow*> filteringSequence;
     ds::amt::IS<Node*> filteringSequenceHierarchy;
     std::string optionString;
@@ -94,12 +90,15 @@ void mainLoop(std::vector<RoutingTableRow>& loadedRoutingTable, HierarchyManager
                 }
                 break;
             case 5:
-                RoutingTableOperations::print(filtering);
-                std::cout << "------------------------------------------\nPrinted " << filtering.size() << " values." << std::endl;
+                if (filteringSequence.isEmpty()) {
+                    option = 10;
+                } else {
+                    option = 0;
+                }
                 break;
             case 6:
-                if (!filtering.empty()) {
-                    UserInteraction::savingPrompt(filtering, filename);
+                if (!filteringSequence.isEmpty()) {
+                    UserInteraction::savingPrompt(filteringSequence, filename);
                 } else {
                     std::cout << "No filtered routing table values to save!" << std::endl;
                 }
@@ -192,7 +191,7 @@ void mainLoop(std::vector<RoutingTableRow>& loadedRoutingTable, HierarchyManager
                     RoutingTableOperations::printRow(*(*it));
                 }
             }
-            std::cout << "------------------------------------------\nFound " << filteringSequence.size() << " values." << std::endl;
+            std::cout << "------------------------------------------\nPrinted " << filteringSequence.size() << " values." << std::endl;
         }
         if (option > 9 && option < 13) {
             filteringSequence.clear();
@@ -203,7 +202,7 @@ void mainLoop(std::vector<RoutingTableRow>& loadedRoutingTable, HierarchyManager
                     RoutingTableOperations::printRow(*(*it)->pData);
                 }
             }
-            std::cout << "------------------------------------------\nFound " << filteringSequenceHierarchy.size() << " values." << std::endl;
+            std::cout << "------------------------------------------\nPrinted " << filteringSequenceHierarchy.size() << " values." << std::endl;
         }
         option = -10;
     } while (true);
