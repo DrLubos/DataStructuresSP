@@ -176,6 +176,7 @@ void mainLoop(std::vector<RoutingTableRow>& loadedRoutingTable, HierarchyManager
                 hierarchyManager.print(*actualNode);
                 break;
             case 21:
+                filteringSequence.clear();
                 Filter::chooseAddress(ipAddressToCompare);
                 tableManager.findRowWithKey(ipAddressToCompare, filteringSequence);
                 break;
