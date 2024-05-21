@@ -6,7 +6,7 @@ class UserInteraction {
 	public:
 		static void printOptions();
 		static void selectNameOfCSVFile(std::string& defaultName);
-        static void savingPrompt(ds::amt::IS<RoutingTableRow*>& routingTableVector, std::string& filename);
+        static void savingPrompt(ds::amt::IS<RoutingTableRow*>& sequence, std::string& filename);
 };
 
 void UserInteraction::printOptions() {
@@ -31,6 +31,9 @@ void UserInteraction::printOptions() {
     std::cout << "\t[16] Print leafs" << std::endl;
     std::cout << "\t------------------ Table mode ------------------" << std::endl;
     std::cout << "\t[21] Filter table by destination IP address" << std::endl;
+    std::cout << "\t----------------- Sorting mode -----------------" << std::endl;
+    std::cout << "\t[31] Sort by IP address" << std::endl;
+    std::cout << "\t[32] Sort by lifetime" << std::endl;
     std::cout << "Your option: ";
 }
 

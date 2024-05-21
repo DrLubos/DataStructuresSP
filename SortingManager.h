@@ -1,0 +1,29 @@
+#include <libds/adt/sorts.h>
+#include <libds/heap_monitor.h>
+
+auto comparePrefix = [](const RoutingTableRow* first, const RoutingTableRow* second) {
+    if (first->ipAddress.to_ulong() < second->ipAddress.to_ulong()) {
+        return true;
+    }
+    if (first->ipAddress.to_ulong() == second->ipAddress.to_ulong()) {
+        return first->prefix < second->prefix;
+    }
+    return false;
+};
+
+auto compareTime = [](const RoutingTableRow* first, const RoutingTableRow* second) {
+    return first->lifetime < second->lifetime;
+};
+
+class SortingManager {
+public:
+    template<typename T>
+    static void sortData(ds::amt::IS<T*>& sequence, const std::function<bool(const RoutingTableRow*, const RoutingTableRow*)>& comparator) {
+        auto sorting = ds::adt::QuickSort<T*>();
+        sorting.sort(sequence, comparator);
+        std::cout << "=========== Data sorted ===========" << std::endl;
+        for (auto& item : sequence) {
+            //RoutingTableOperations::sortPrint(*item);
+        }
+    }
+};
