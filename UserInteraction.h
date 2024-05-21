@@ -4,10 +4,29 @@
 
 class UserInteraction {
 	public:
+        static void hierarchyFilteredToNormalSequence(ds::amt::IS<Node*>& hierarchy, ds::amt::IS<RoutingTableRow*>& sequence);
+        static void printFilteredSequence(ds::amt::IS<RoutingTableRow*>& sequence);
 		static void printOptions();
 		static void selectNameOfCSVFile(std::string& defaultName);
         static void savingPrompt(ds::amt::IS<RoutingTableRow*>& sequence, std::string& filename);
 };
+
+void UserInteraction::hierarchyFilteredToNormalSequence(ds::amt::IS<Node*>& hierarchy, ds::amt::IS<RoutingTableRow*>& sequence) {
+    for (auto& node : hierarchy) {
+        sequence.insertLast().data_ = node->pData;
+    }
+}
+
+void UserInteraction::printFilteredSequence(ds::amt::IS<RoutingTableRow*> &sequence) {
+    if (!sequence.isEmpty()) {
+        ds::amt::IS<RoutingTableRow*>::ImplicitSequenceIterator beginSequence = sequence.begin();
+        ds::amt::IS<RoutingTableRow*>::ImplicitSequenceIterator endSequence = sequence.end();
+        for (auto it = beginSequence; it != endSequence; ++it) {
+            RoutingTableOperations::printRow(*(*it));
+        }
+    }
+    std::cout << "------------------------------------------\nPrinted " << sequence.size() << " values." << std::endl;
+}
 
 void UserInteraction::printOptions() {
     std::cout << std::endl << "Options:" << std::endl;

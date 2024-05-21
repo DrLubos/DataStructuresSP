@@ -29,7 +29,7 @@ auto matchWithAddressHierarchy = [](const Node& node, const std::bitset<32>& add
 
 void mainLoop(std::vector<RoutingTableRow>& loadedRoutingTable, HierarchyManager& hierarchyManager, TableManager& tableManager) {
     ds::amt::IS<RoutingTableRow*> filteringSequence;
-
+    ds::amt::IS<Node*> hierarchyFilteringSequence;
     std::string optionString;
     int option;
     auto* actualNode = hierarchyManager.hierarchy.accessRoot();
@@ -40,18 +40,22 @@ void mainLoop(std::vector<RoutingTableRow>& loadedRoutingTable, HierarchyManager
         unsigned int startingLifetime = 0;
         unsigned int endingLifetime = UINT_MAX;
         std::bitset<32> ipAddressToCompare;
+        ds::amt::MultiWayEH<Node>::PreOrderHierarchyIterator begin(&hierarchyManager.hierarchy, actualNode);
+        ds::amt::MultiWayEH<Node>::PreOrderHierarchyIterator end(&hierarchyManager.hierarchy, nullptr);
         try {
             option = std::stoi(optionString);
         } catch (const std::exception& e) {
             option = -1;
         }
         std::string filename;
+        if ((option > -1 && option < 3) || option == 21 || (option > 9 && option < 13)) {
+            filteringSequence.clear();
+        }
         switch (option) {
             case -1:
                 std::cout << "Exiting..." << std::endl;
                 return;
             case 0:
-                filteringSequence.clear();
                 Filter::chooseAddress(ipAddressToCompare);
                 Filter::chooseLifetime(startingLifetime, endingLifetime);
                 Filter::filterEntries(loadedRoutingTable.begin(), loadedRoutingTable.end(),
@@ -61,7 +65,6 @@ void mainLoop(std::vector<RoutingTableRow>& loadedRoutingTable, HierarchyManager
                                       }, filteringSequence);
                 break;
             case 1:
-                filteringSequence.clear();
                 Filter::chooseAddress(ipAddressToCompare);
                 Filter::filterEntries(loadedRoutingTable.begin(), loadedRoutingTable.end(),
                                       [&](const RoutingTableRow& row) {
@@ -69,7 +72,6 @@ void mainLoop(std::vector<RoutingTableRow>& loadedRoutingTable, HierarchyManager
                                       }, filteringSequence);
                 break;
             case 2:
-                filteringSequence.clear();
                 Filter::chooseLifetime(startingLifetime, endingLifetime);
                 Filter::filterEntries(loadedRoutingTable.begin(), loadedRoutingTable.end(),
                                       [&](const RoutingTableRow& row) {
@@ -91,7 +93,7 @@ void mainLoop(std::vector<RoutingTableRow>& loadedRoutingTable, HierarchyManager
                 }
                 break;
             case 5:
-                option = 0;
+                UserInteraction::printFilteredSequence(filteringSequence);
                 break;
             case 6:
                 if (!filteringSequence.isEmpty()) {
@@ -101,54 +103,27 @@ void mainLoop(std::vector<RoutingTableRow>& loadedRoutingTable, HierarchyManager
                 }
                 break;
             case 10:
-            {
-                ds::amt::IS<Node*> filteringSequenceHierarchy;
                 std::cout << "Your IP should start with: " << hierarchyManager.getOctetsToNode(*actualNode) << std::endl;
                 Filter::chooseAddress(ipAddressToCompare);
                 Filter::chooseLifetime(startingLifetime, endingLifetime);
-                ds::amt::MultiWayExplicitHierarchy<Node>::PreOrderHierarchyIterator begin(&hierarchyManager.hierarchy, actualNode);
-                ds::amt::MultiWayExplicitHierarchy<Node>::PreOrderHierarchyIterator end(&hierarchyManager.hierarchy, nullptr);
                 Filter::filterEntries(begin, end, [&](const Node& node) {
                     return matchWithAddressHierarchy(node, ipAddressToCompare) &&
                            matchLifetimeHierarchy(node, startingLifetime, endingLifetime);
-                }, filteringSequenceHierarchy);
-                filteringSequence.clear();
-                for (auto& node : filteringSequenceHierarchy) {
-                    filteringSequence.insertLast().data_ = node->pData;
-                }
+                }, hierarchyFilteringSequence);
                 break;
-            }
             case 11:
-            {
-                ds::amt::IS<Node*> filteringSequenceHierarchy;
                 std::cout << "Your IP should start with: " << hierarchyManager.getOctetsToNode(*actualNode) << std::endl;
                 Filter::chooseAddress(ipAddressToCompare);
-                ds::amt::MultiWayExplicitHierarchy<Node>::PreOrderHierarchyIterator begin(&hierarchyManager.hierarchy, actualNode);
-                ds::amt::MultiWayExplicitHierarchy<Node>::PreOrderHierarchyIterator end(&hierarchyManager.hierarchy, nullptr);
                 Filter::filterEntries(begin, end, [&](const Node& node) {
                     return matchWithAddressHierarchy(node, ipAddressToCompare);
-                }, filteringSequenceHierarchy);
-                filteringSequence.clear();
-                for (auto& node : filteringSequenceHierarchy) {
-                    filteringSequence.insertLast().data_ = node->pData;
-                }
+                }, hierarchyFilteringSequence);
                 break;
-            }
             case 12:
-            {
-                ds::amt::IS<Node*> filteringSequenceHierarchy;
                 Filter::chooseLifetime(startingLifetime, endingLifetime);
-                ds::amt::MultiWayExplicitHierarchy<Node>::PreOrderHierarchyIterator begin(&hierarchyManager.hierarchy, actualNode);
-                ds::amt::MultiWayExplicitHierarchy<Node>::PreOrderHierarchyIterator end(&hierarchyManager.hierarchy, nullptr);
                 Filter::filterEntries(begin, end, [&](const Node& node) {
                     return matchLifetimeHierarchy(node, startingLifetime, endingLifetime);
-                }, filteringSequenceHierarchy);
-                filteringSequence.clear();
-                for (auto& node : filteringSequenceHierarchy) {
-                    filteringSequence.insertLast().data_ = node->pData;
-                }
+                }, hierarchyFilteringSequence);
                 break;
-            }
             case 13:
                 hierarchyManager.printNodeInfo(*actualNode);
                 break;
@@ -171,21 +146,20 @@ void mainLoop(std::vector<RoutingTableRow>& loadedRoutingTable, HierarchyManager
                 try {
                     option = std::stoi(optionString);
                 } catch (const std::exception& e) {
-                    option = -1;
+                    option = -10;
                 }
                 if (option < 0 || option >= actualNode->sons_->size()) {
                     std::cout << "Invalid son number!" << std::endl;
                     break;
                 }
                 actualNode = actualNode->sons_->access(option)->data_;
-                option = -1;
+                option = -10;
                 break;
             case 16:
                 hierarchyManager.printNodeInfo(*actualNode);
                 hierarchyManager.print(*actualNode);
                 break;
             case 21:
-                filteringSequence.clear();
                 Filter::chooseAddress(ipAddressToCompare);
                 tableManager.findRowWithKey(ipAddressToCompare, filteringSequence);
                 break;
@@ -199,15 +173,12 @@ void mainLoop(std::vector<RoutingTableRow>& loadedRoutingTable, HierarchyManager
                 std::cout << "Invalid option!" << std::endl;
                 break;
         }
+        if (option > 9 && option < 13) {
+            UserInteraction::hierarchyFilteredToNormalSequence(hierarchyFilteringSequence, filteringSequence);
+            hierarchyFilteringSequence.clear();
+        }
         if ((option > -1 && option < 3) || option == 21 || (option > 9 && option < 13)) {
-            if (!filteringSequence.isEmpty()) {
-                ds::amt::IS<RoutingTableRow*>::ImplicitSequenceIterator begin = filteringSequence.begin();
-                ds::amt::IS<RoutingTableRow*>::ImplicitSequenceIterator end = filteringSequence.end();
-                for (auto it = begin; it != end; ++it) {
-                    RoutingTableOperations::printRow(*(*it));
-                }
-            }
-            std::cout << "------------------------------------------\nPrinted " << filteringSequence.size() << " values." << std::endl;
+            UserInteraction::printFilteredSequence(filteringSequence);
         }
         option = -10;
     } while (true);
