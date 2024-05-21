@@ -51,8 +51,8 @@ void UserInteraction::printOptions() {
     std::cout << "\t------------------ Table mode ------------------" << std::endl;
     std::cout << "\t[21] Filter table by destination IP address" << std::endl;
     std::cout << "\t----------------- Sorting mode -----------------" << std::endl;
-    std::cout << "\t[31] Sort by IP address" << std::endl;
-    std::cout << "\t[32] Sort by lifetime" << std::endl;
+    std::cout << "\t[31] Sort filtered by IP address" << std::endl;
+    std::cout << "\t[32] Sort filtered by lifetime" << std::endl;
     std::cout << "Your option: ";
 }
 

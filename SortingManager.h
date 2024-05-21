@@ -19,11 +19,15 @@ class SortingManager {
 public:
     template<typename T>
     static void sortData(ds::amt::IS<T*>& sequence, const std::function<bool(const RoutingTableRow*, const RoutingTableRow*)>& comparator) {
+        if (sequence.isEmpty()) {
+            std::cout << "========================= No data to sort! =========================" << std::endl;
+            return;
+        }
         auto sorting = ds::adt::QuickSort<T*>();
         sorting.sort(sequence, comparator);
-        std::cout << "=========== Data sorted ===========" << std::endl;
+        std::cout << "============V====== By IP ======V======== Data Sorted ========V================ By Lifetime ================V" << std::endl;
         for (auto& item : sequence) {
-            //RoutingTableOperations::sortPrint(*item);
+            RoutingTableOperations::sortPrint(*item);
         }
     }
 };

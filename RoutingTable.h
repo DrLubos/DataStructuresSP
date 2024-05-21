@@ -31,11 +31,12 @@ private:
     static void saveRowToCSV(std::ofstream& file, const RoutingTableRow& row);
 public:
     static bool isStringNumeric(const std::string& str);
+    static void print(const std::vector<RoutingTableRow>& vectorToPrint);
     static void printRow(const RoutingTableRow& row);
+    static void sortPrint(const RoutingTableRow& row);
     static std::bitset<32> processIPAddress(const std::string& ipAddressString, unsigned char* prefix);
     static unsigned int processLifetime(const std::string& lifetimeString);
     static std::string convertLifetime(unsigned int lifetime);
-    static void print(const std::vector<RoutingTableRow>& vectorToPrint);
     static void saveToCSV(const std::string& filename, const std::vector<RoutingTableRow>& vectorToPrint);
     static void saveFilteredToCSV(const std::string& filename, ds::amt::IS<RoutingTableRow*>& sequence);
 };
@@ -84,6 +85,74 @@ void RoutingTableOperations::printRow(const RoutingTableRow& row) {
     std::cout << std::endl;
     std::cout << "Lifetime: ";
     row.lifetime > 59 ? std::cout << row.lifetime << "(s) " << convertLifetime(row.lifetime) << std::endl : std::cout << row.lifetime << "s" << std::endl;
+}
+
+void RoutingTableOperations::sortPrint(const RoutingTableRow &row) {
+    std::string firstPart = "IP address: ";
+    for (int i = row.ipAddress.size() - 8; i >= 0; i -= 8) {
+        firstPart += std::to_string(int(std::bitset<8>(row.ipAddress.to_ulong() >> i).to_ulong()));
+        if (i > 0) {
+            firstPart += ".";
+        }
+    }
+    firstPart += "/" + std::to_string(int(row.prefix));
+    while (firstPart.size() < 35) {
+        firstPart += " ";
+    }
+    firstPart += "Next Hop: ";
+    for (int i = row.destinationIP.size() - 8; i >= 0; i -= 8) {
+        firstPart += std::to_string(int(std::bitset<8>(row.destinationIP.to_ulong() >> i).to_ulong()));
+        if (i > 0) {
+            firstPart += ".";
+        }
+    }
+    while (firstPart.size() < 62) {
+        firstPart += " ";
+    }
+    std::string lifetimeString = convertLifetime(row.lifetime);
+    firstPart += "Lifetime: " + lifetimeString;
+    if (lifetimeString.empty()) {
+        firstPart += "UNLIMITED";
+    }
+    firstPart += " in seconds:    " + std::to_string(row.lifetime);
+    while (firstPart.size() < 109) {
+        size_t index = firstPart.find("seconds:");
+        firstPart.insert(index + 8, " ");
+    }
+    std::cout << firstPart << std::endl;
+}
+
+std::bitset<32> RoutingTableOperations::processIPAddress(const std::string& ipAddressString, unsigned char* prefix) {
+    std::bitset<32> ipAddressBits;
+    std::istringstream iss(ipAddressString);
+    std::string octetString;
+    int index = 3;
+    while (std::getline(iss, octetString, '.')) {
+        if (!isStringIPMaskFormat(octetString)) {
+            std::cout << octetString << std::endl;
+            throw std::runtime_error("Error: Invalid IP address format.\n");
+        }
+        int octet = std::stoi(octetString);
+        if (octet >= 0 && octet < 256) {
+            ipAddressBits |= (std::bitset<32>(octet) << (index * 8));
+        }
+        --index;
+    }
+    size_t startingPrefixIndex = ipAddressString.find('/');
+    if (startingPrefixIndex != std::string::npos) {
+        std::string prefixString = ipAddressString.substr(startingPrefixIndex + 1);
+        if (!isStringIPMaskFormat(prefixString)) {
+            throw std::runtime_error("Error: Invalid prefix format.\n");
+        }
+        int prefixValue = std::stoi(prefixString);
+        if (prefixValue < 0 || prefixValue > 32) {
+            throw std::runtime_error("Error: Invalid prefix value.\n");
+        }
+        if (prefix != nullptr) {
+            *prefix = prefixValue;
+        }
+    }
+    return ipAddressBits;
 }
 
 unsigned int RoutingTableOperations::processLifetime(const std::string& lifetimeString) {
@@ -265,39 +334,6 @@ void RoutingTableOperations::saveRowToCSV(std::ofstream& file, const RoutingTabl
         }
     }
     file << ipAddressStream.str() << "/" << int(row.prefix) << ";via " << destinationIPStream.str() << ";" << convertLifetime(row.lifetime);
-}
-
-std::bitset<32> RoutingTableOperations::processIPAddress(const std::string& ipAddressString, unsigned char* prefix) {
-    std::bitset<32> ipAddressBits;
-    std::istringstream iss(ipAddressString);
-    std::string octetString;
-    int index = 3;
-    while (std::getline(iss, octetString, '.')) {
-        if (!isStringIPMaskFormat(octetString)) {
-            std::cout << octetString << std::endl;
-            throw std::runtime_error("Error: Invalid IP address format.\n");
-        }
-        int octet = std::stoi(octetString);
-        if (octet >= 0 && octet < 256) {
-            ipAddressBits |= (std::bitset<32>(octet) << (index * 8));
-        }
-        --index;
-    }
-    size_t startingPrefixIndex = ipAddressString.find('/');
-    if (startingPrefixIndex != std::string::npos) {
-        std::string prefixString = ipAddressString.substr(startingPrefixIndex + 1);
-        if (!isStringIPMaskFormat(prefixString)) {
-            throw std::runtime_error("Error: Invalid prefix format.\n");
-        }
-        int prefixValue = std::stoi(prefixString);
-        if (prefixValue < 0 || prefixValue > 32) {
-            throw std::runtime_error("Error: Invalid prefix value.\n");
-        }
-        if (prefix != nullptr) {
-            *prefix = prefixValue;
-        }
-    }
-    return ipAddressBits;
 }
 
 void RoutingTableOperations::saveFilteredToCSV(const std::string& filename, ds::amt::IS<RoutingTableRow*>& sequence) {
