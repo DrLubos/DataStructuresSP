@@ -17,8 +17,8 @@ auto compareTime = [](const RoutingTableRow* first, const RoutingTableRow* secon
 
 class SortingManager {
 public:
-    template<typename T>
-    static void sortData(ds::amt::IS<T*>& sequence, const std::function<bool(const RoutingTableRow*, const RoutingTableRow*)>& comparator) {
+    template<typename T, typename Comp>
+    static void sortData(ds::amt::IS<T*>& sequence, Comp& comparator) {
         if (sequence.isEmpty()) {
             std::cout << "========================= No data to sort! =========================" << std::endl;
             return;

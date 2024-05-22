@@ -4,29 +4,6 @@
 #include "SortingManager.h"
 #include <libds/heap_monitor.h>
 
-auto matchLifetimeHierarchy = [](const Node& node, unsigned int startTime, unsigned int endTime) {
-    if (node.pData != nullptr) {
-        if (node.pData->lifetime >= startTime && node.pData->lifetime <= endTime) {
-            return true;
-        }
-        return false;
-    }
-    return false;
-};
-
-auto matchWithAddressHierarchy = [](const Node& node, const std::bitset<32>& addressToCompare) {
-    if (node.pData != nullptr) {
-        std::bitset<32> ipAddress = node.pData->ipAddress;
-        for (int i = 0; i < node.pData->prefix; ++i) {
-            if (ipAddress[ipAddress.size() - i - 1] != addressToCompare[addressToCompare.size() - i - 1]) {
-                return false;
-            }
-        }
-        return true;
-    }
-    return false;
-};
-
 void mainLoop(std::vector<RoutingTableRow>& loadedRoutingTable, HierarchyManager& hierarchyManager, TableManager& tableManager) {
     ds::amt::IS<RoutingTableRow*> filteringSequence;
     ds::amt::IS<Node*> hierarchyFilteringSequence;

@@ -10,6 +10,29 @@ struct Node {
     }
 };
 
+auto matchLifetimeHierarchy = [](const Node& node, unsigned int startTime, unsigned int endTime) {
+    if (node.pData != nullptr) {
+        if (node.pData->lifetime >= startTime && node.pData->lifetime <= endTime) {
+            return true;
+        }
+        return false;
+    }
+    return false;
+};
+
+auto matchWithAddressHierarchy = [](const Node& node, const std::bitset<32>& addressToCompare) {
+    if (node.pData != nullptr) {
+        std::bitset<32> ipAddress = node.pData->ipAddress;
+        for (int i = 0; i < node.pData->prefix; ++i) {
+            if (ipAddress[ipAddress.size() - i - 1] != addressToCompare[addressToCompare.size() - i - 1]) {
+                return false;
+            }
+        }
+        return true;
+    }
+    return false;
+};
+
 class HierarchyManager {
 public:
     ds::amt::MultiWayEH<Node> hierarchy;
@@ -23,10 +46,10 @@ public:
 
     HierarchyManager();
     void addBranch(std::bitset<32> sourceIP, RoutingTableRow* pVector);
+    void print(ds::amt::MWEHBlock<Node>& node);
     void printNodeInfo(ds::amt::MWEHBlock<Node>& node);
     void printSons(ds::amt::MWEHBlock<Node>& node);
     std::string getOctetsToNode(ds::amt::MWEHBlock<Node>& node);
-    void print(ds::amt::MWEHBlock<Node>& node);
 };
 
 HierarchyManager::HierarchyManager() {
@@ -71,6 +94,17 @@ void HierarchyManager::addBranch(std::bitset<32> sourceIP, RoutingTableRow* pVec
         fourthLevel.data_.octet = std::bitset<8>((sourceIP.to_ulong()) & 0xFF);
         fourthLevel.data_.pData = pVector;
     }
+}
+
+void HierarchyManager::print(ds::amt::MWEHBlock<Node>& node) {
+    size_t index = 0;
+    hierarchy.processLevelOrder(&node, std::function<void(ds::amt::MWEHBlock<Node>*)>([&](ds::amt::MWEHBlock<Node>* node) {
+        if (node->data_.pData != nullptr && hierarchy.level(*node) == 4) {
+            RoutingTableOperations::printRow(*node->data_.pData);
+            ++index;
+        }
+    }));
+    std::cout << "-------------------------\nPrinted: " << index << " values" << std::endl;
 }
 
 void HierarchyManager::printNodeInfo(ds::amt::MWEHBlock<Node>& node) {
@@ -118,15 +152,4 @@ std::string HierarchyManager::getOctetsToNode(ds::amt::MWEHBlock<Node>& node) {
     default:
         return "";
     }
-}
-
-void HierarchyManager::print(ds::amt::MWEHBlock<Node>& node) {
-    size_t index = 0;
-    hierarchy.processLevelOrder(&node, std::function<void(ds::amt::MWEHBlock<Node>*)>([&](ds::amt::MWEHBlock<Node>* node) {
-        if (node->data_.pData != nullptr && hierarchy.level(*node) == 4) {
-            RoutingTableOperations::printRow(*node->data_.pData);
-            ++index;
-        }
-        }));
-    std::cout << "-------------------------\nPrinted: " << index << " values" << std::endl;
 }
