@@ -45,6 +45,7 @@ public:
     }
 
     HierarchyManager();
+    bool existsLastSonWithOctet(ds::amt::MWEHBlock<Node>& node, std::bitset<8> octetParam);
     void addBranch(std::bitset<32> sourceIP, RoutingTableRow* pVector);
     void print(ds::amt::MWEHBlock<Node>& node);
     void printNodeInfo(ds::amt::MWEHBlock<Node>& node);
@@ -56,26 +57,34 @@ HierarchyManager::HierarchyManager() {
     auto& root = hierarchy.emplaceRoot();
 }
 
+bool HierarchyManager::existsLastSonWithOctet(ds::amt::MWEHBlock<Node>& node, std::bitset<8> octetParam) {
+    auto last = node.sons_->accessLast();
+    if (last == nullptr) {
+        return false;
+    }
+    if (last->data_->data_.octet == octetParam) {
+        return true;
+    }
+    return false;
+}
+
 void HierarchyManager::addBranch(std::bitset<32> sourceIP, RoutingTableRow* pVector) {
     auto root = hierarchy.accessRoot();
-    auto firstLevel = findSon(*root, std::bitset<8>((sourceIP >> 24).to_ulong()));
-    if (firstLevel != nullptr) {
-        auto secondLevel = findSon(*firstLevel->data_, std::bitset<8>((sourceIP >> 16).to_ulong() & 0xFF));
-        if (secondLevel != nullptr) {
-            auto thirdLevel = findSon(*secondLevel->data_, std::bitset<8>((sourceIP >> 8).to_ulong() & 0xFF));
-            if (thirdLevel != nullptr) {
-                auto& fourthLevel = hierarchy.emplaceSon(*thirdLevel->data_, hierarchy.degree(*thirdLevel->data_));
+    if (existsLastSonWithOctet(*root, std::bitset<8>((sourceIP >> 24).to_ulong()))) {
+        if (existsLastSonWithOctet(*root->sons_->accessLast()->data_, std::bitset<8>((sourceIP >> 16).to_ulong() & 0xFF))) {
+            if (existsLastSonWithOctet(*root->sons_->accessLast()->data_->sons_->accessLast()->data_, std::bitset<8>((sourceIP >> 8).to_ulong() & 0xFF))) {
+                auto& fourthLevel = hierarchy.emplaceSon(*root->sons_->accessLast()->data_->sons_->accessLast()->data_->sons_->accessLast()->data_, hierarchy.degree(*root->sons_->accessLast()->data_->sons_->accessLast()->data_->sons_->accessLast()->data_));
                 fourthLevel.data_.octet = std::bitset<8>((sourceIP.to_ulong()) & 0xFF);
                 fourthLevel.data_.pData = pVector;
             } else {
-                auto& thirdLevel = hierarchy.emplaceSon(*secondLevel->data_, hierarchy.degree(*secondLevel->data_));
+                auto& thirdLevel = hierarchy.emplaceSon(*root->sons_->accessLast()->data_->sons_->accessLast()->data_, hierarchy.degree(*root->sons_->accessLast()->data_->sons_->accessLast()->data_));
                 thirdLevel.data_.octet = std::bitset<8>((sourceIP >> 8).to_ulong() & 0xFF);
                 auto& fourthLevel = hierarchy.emplaceSon(thirdLevel, hierarchy.degree(thirdLevel));
                 fourthLevel.data_.octet = std::bitset<8>((sourceIP.to_ulong()) & 0xFF);
                 fourthLevel.data_.pData = pVector;
             }
         } else {
-            auto& secondLevel = hierarchy.emplaceSon(*firstLevel->data_, hierarchy.degree(*firstLevel->data_));
+            auto& secondLevel = hierarchy.emplaceSon(*root->sons_->accessLast()->data_, hierarchy.degree(*root->sons_->accessLast()->data_));
             secondLevel.data_.octet = std::bitset<8>((sourceIP >> 16).to_ulong() & 0xFF);
             auto& thirdLevel = hierarchy.emplaceSon(secondLevel, hierarchy.degree(secondLevel));
             thirdLevel.data_.octet = std::bitset<8>((sourceIP >> 8).to_ulong() & 0xFF);
