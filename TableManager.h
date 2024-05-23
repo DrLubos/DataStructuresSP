@@ -16,7 +16,8 @@ public:
 
 TableManager::TableManager() {
     //table = new ds::adt::SortedSequenceTable<std::bitset<32>, ds::adt::ImplicitList<RoutingTableRow*>*>();
-    table = new ds::adt::BinarySearchTree<std::bitset<32>, ds::adt::ImplicitList<RoutingTableRow*>*>();
+    //table = new ds::adt::BinarySearchTree<std::bitset<32>, ds::adt::ImplicitList<RoutingTableRow*>*>();
+    table = new ds::adt::Treap<std::bitset<32>, ds::adt::ImplicitList<RoutingTableRow*>*>();
 }
 
 TableManager::~TableManager() {
